@@ -25,7 +25,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 :meth:`Annot.GetText`              Extract annotation text
 :meth:`Annot.GetTextbox`           Extract annotation text
 :meth:`Annot.GetTextPage`          Extract text page 
-:meth:`Annot.SetApnBbox`           Set annotation appearance bbox
+:meth:`Annot.SetApnBBox`           Set annotation appearance bbox
 :meth:`Annot.SetApnMatrix`         Set annotation appearance matrix
 :meth:`Annot.SetBorder`            Set annotation's border properties
 :meth:`Annot.SetBlendMode`         Set annotation's blend mode
@@ -186,7 +186,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       Set the annotation's blend mode. See :ref:`AdobeManual`, page 324 for explanations. The blend mode can also be set in :meth:`Annot.Update`.
 
-      :arg string blendmode: set the blend mode. Use :meth:`Annot.Update` to reflect this in the visual appearance. For predefined values see :ref:`BlendMode`. Use `PDF_BM_Normal` to **remove** a blend mode.
+      :arg string blendmode: set the blend mode. Use :meth:`Annot.Update` to reflect this in the visual appearance. For predefined values see :ref:`BlendModes`. Use :data:`PDF_BM_Normal` to **remove** a blend mode.
 
 
    .. method:: SetName(string name)
@@ -195,7 +195,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       :arg string name: the new name.
 
-      .. caution:: If you set the name of a 'Stamp' annotation, then this will **not change** the rectangle, nor will the text be layouted in any way. If you choose a standard text from :ref:`StampIcons` (the **exact** name piece after `"STAMP_"`), you should receive the original layout. An **arbitrary text** will not be changed to upper case, but be written in font "Times-Bold" as is, horizontally centered in **one line** and be shortened to fit. To get your text fully displayed, its length using :data:`fontSize` 20 must not exceed 190 points. So please make sure that the following inequality is true: `Utils.GetTextLength(text, fontName: "tibo", fontSize: 20) <= 190`.
+      .. caution:: If you set the name of a 'Stamp' annotation, then this will **not change** the rectangle, nor will the text be layouted in any way. If you choose a standard text from :ref:`StampIcons` (the **exact** name piece after `"STAMP_"`), you should receive the original layout. An **arbitrary text** will not be changed to upper case, but be written in font "Times-Bold" as is, horizontally centered in **one line** and be shortened to fit. To get your text fully displayed, its length using :data:`fontSize` 20 must not exceed 190 points. So please make sure that the following inequality is true: :meth:`Utils.GetTextLength` with ``fontName: "tibo"`` and ``fontSize: 20`` must be ``<= 190``.
 
    .. method:: SetRect(Rect rect)
 
@@ -289,7 +289,57 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       :rtype: bool
 
-      .. note:: Using this method inside a :meth:`Page.GetAnnots` loop is **not recommended!** This is because most annotation updates require the owning page to be reloaded -- which cannot be done inside this loop. Please use the example coding pattern given in the documentation of this generator.
+      .. note:: Using this method inside a :meth:`Page.Annots` loop is **not recommended!** This is because most annotation updates require the owning page to be reloaded -- which cannot be done inside this loop. Please use the example coding pattern given in the documentation of this generator.
+
+
+   .. method:: GetText()
+
+      Extract the annotation's text.
+
+      :rtype: string
+
+   .. method:: GetTextbox(Rect rect, int flags: 0)
+
+      Extract annotation text that lies in *rect*.
+
+      :arg Rect rect: area to extract.
+      :arg int flags: text extraction flags.
+
+      :rtype: string
+
+   .. method:: GetTextPage(int flags: 0, IRect clip: null)
+
+      Make a :ref:`TextPage` from the annotation appearance.
+
+      :arg int flags: text extraction flags.
+      :arg IRect clip: optional clip rectangle.
+
+      :rtype: :ref:`TextPage`
+
+   .. attribute:: ApnBbox
+
+      Annotation appearance bbox, or an infinite rectangle if there is no appearance stream.
+
+      :type: :ref:`Rect`
+
+   .. attribute:: ApnMatrix
+
+      Annotation appearance matrix.
+
+      :type: :ref:`Matrix`
+
+   .. method:: SetApnBBox(Rect bbox)
+   .. method:: SetApnBbox(Rect bbox)
+
+      Set the annotation appearance bbox.
+
+      :arg Rect bbox: the new appearance rectangle.
+
+   .. method:: SetApnMatrix(Matrix matrix)
+
+      Set the annotation appearance matrix.
+
+      :arg Matrix matrix: the new appearance matrix.
 
 
    .. attribute:: FileInfo
@@ -495,8 +545,10 @@ This is a list of icons referenceable by name for annotation types 'Text' and 'F
 Output Structures
 --------------------------------
 
-AnnotInfo Structure
-~~~~~~~~~~~~~~~~~~~
+.. _AnnotInfo:
+
+:class:`AnnotInfo` Structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 =============== ====================================================================
 **Key**         **Value**
@@ -543,16 +595,16 @@ Stroke   a *list* of float storing the stroke color
 ======== ======================================================================
 
 FileInfo Structure
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 
-========= =================================
-**Key**  **Value**
-========= =================================
-FileName  *string* file name
-Desc      *string* description of the file
-Length    *int* compressed length
-Size      *int* uncompressed file size
-========= =================================
+========== =================================
+**Key**    **Value**
+========== =================================
+FileName   *string* file name
+Desc       *string* description of the file
+Length     *int* compressed length
+Size       *int* uncompressed file size
+========== =================================
 
 .. rubric:: Footnotes
 

@@ -12,7 +12,7 @@ DisplayList is a list containing drawing commands (text, images, etc.). The inte
 1. as a caching-mechanism to reduce parsing of a page
 2. as a data structure in multi-threading setups, where one thread parses the page and another one renders pages.
 
-A display list is populated with objects from a page, usually by executing :meth:`Page.GetDisplaylist`. There also exists an independent constructor.
+A display list is populated with objects from a page, usually by executing :meth:`Page.GetDisplayList`. There also exists an independent constructor.
 
 "Replay" the list (once or many times) by invoking one of its methods :meth:`DisplayList.Run`, :meth:`DisplayList.GetPixmap` or :meth:`DisplayList.GetTextPage`.
 
@@ -40,14 +40,14 @@ A display list is populated with objects from a page, usually by executing :meth
 
       :rtype: DisplayList
 
-   .. method:: Run(Device device, Matrix matrix, Rect area)
+   .. method:: Run(DeviceWrapper device, Matrix matrix, object area)
     
       Run the display list through a device. The device will populate the display list with its "commands" (i.e. text extraction or image creation). The display list can later be used to "read" a page many times without having to re-interpret it from the document file.
 
-      You will most probably instead use one of the specialized run methods below -- :meth:`GetPixmap` or :meth:`GetTextpage`.
+      You will most probably instead use one of the specialized run methods below -- :meth:`GetPixmap` or :meth:`GetTextPage`.
 
-      :arg device: Device
-      :type device: :ref:`Device`
+      :arg device: :class:`DeviceWrapper`
+      :type device: :class:`DeviceWrapper`
 
       :arg matrix: Transformation matrix to apply to the display list contents.
       :type Matrix: :ref:`Matrix`

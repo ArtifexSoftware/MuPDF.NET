@@ -13,7 +13,7 @@ A *ChunkedDocument* is a read-only list of :ref:`Chunk <ChunkedDocument_Chunk>` 
 
 .. note::
 
-   :meth:`Document.ToChunks` requires the layout pipeline. Switch it on with `MuPDF4LLM.SetUseLayout(true)` before calling it.
+   :meth:`Document.ToChunks` requires the layout pipeline. Switch it on with :meth:`Utils.UseLayout` (`true`) before calling it.
 
 .. note::
 
@@ -35,7 +35,7 @@ A *ChunkedDocument* is a read-only list of :ref:`Chunk <ChunkedDocument_Chunk>` 
 :attr:`ChunkedDocument.Figures`                  All figures and formulas
 :attr:`ChunkedDocument.Hierarchy`                Section headings as a tree
 :attr:`ChunkedDocument.Params`                   The chunking parameters used
-:attr:`ChunkedDocument.ReassemblyParams`         Parameter names :meth:`ReassembleChunks` can change
+:attr:`ChunkedDocument.ReassemblyParams`         Parameter names :meth:`ChunkedDocument.ReassembleChunks` can change
 :attr:`ChunkedDocument.Sections`                 All sections (heading spans)
 :attr:`ChunkedDocument.Tables`                   All tables
 :attr:`ChunkedDocument.Text`                     Text of all chunks joined together
@@ -60,7 +60,7 @@ A *ChunkedDocument* is a read-only list of :ref:`Chunk <ChunkedDocument_Chunk>` 
 
     .. note::
 
-       A *ChunkedDocument* created this way cannot be re-chunked with :meth:`ReassembleChunks`, because it does not hold the sentence data the chunker needs.
+       A *ChunkedDocument* created this way cannot be re-chunked with :meth:`ChunkedDocument.ReassembleChunks`, because it does not hold the sentence data the chunker needs.
 
   .. method:: Get(string id, object defaultValue: null, bool throwIfMissing: true)
 
@@ -179,7 +179,7 @@ A *ChunkedDocument* is a read-only list of :ref:`Chunk <ChunkedDocument_Chunk>` 
 
   .. attribute:: ReassemblyParams
 
-    Static. The names of the parameters that :meth:`ReassembleChunks` can change: `max_tokens`, `min_tokens`, `breakpoint_threshold`, `table_mode`, `merge_small_chunks` and `respect_section_starts`.
+    Static. The names of the parameters that :meth:`ChunkedDocument.ReassembleChunks` can change: ``max_tokens``, ``min_tokens``, ``breakpoint_threshold``, ``table_mode``, ``merge_small_chunks`` and ``respect_section_starts``.
 
     :type: `HashSet<string>`
 
@@ -201,8 +201,8 @@ A *ChunkedDocument* is a read-only list of :ref:`Chunk <ChunkedDocument_Chunk>` 
 
 .. code-block:: cs
 
-    MuPDF4LLM.SetUseLayout(true);
-    Document doc = new Document("report.pdf");
+    Utils.UseLayout(true);
+    Document doc = Document.Open("report.pdf");
     ChunkedDocument chunks = doc.ToChunks(maxTokens: 300);
 
     Console.WriteLine(chunks); // ChunkedDocument(chunks=..., tables=..., ...)

@@ -11,77 +11,85 @@ Some functions provide detail access to PDF structures. Others are stripped-down
 Yet others are handy, general-purpose utilities.
 
 
-==================================== ==============================================================
-**Function**                         **Short Description**
-==================================== ==============================================================
-:meth:`ConversionHeader`             Return header string for *get_text* methods
-:meth:`sRGB2rgb`                     Convenience function returning a color (red, green, blue) for a given *sRGB* color integer
-:meth:`ConversionTrailer`            Return trailer string for *get_text* methods
-:meth:`EMPTY_IRECT`                  Return the (standard) empty / invalid rectangle
-:meth:`EMPTY_QUAD`                   Return the (standard) empty / invalid quad
-:meth:`EMPTY_RECT`                   Return the (standard) empty / invalid rectangle
-:meth:`INFINITE_IRECT`               Return the (only existing) infinite rectangle
-:meth:`INFINITE_QUAD`                Return the (only existing) infinite quad
-:meth:`INFINITE_RECT`                Return the (only existing) infinite rectangle
-:meth:`GetPdfNow`                    Return the current timestamp in PDF format
-:meth:`GetPdfString`                 Return PDF-compatible string
-:meth:`GetTextLength`                Return string length for a given font & :data:`fontsize`
-:meth:`GlyphName2Unicode`            Return unicode from a glyph name
-:meth:`GetImageProfile`              Return a dictionary of basic image properties
-:meth:`INFINITE_RECT`                Return the (only existing) infinite rectangle
-:meth:`PaperRect`                    Return rectangle for a known paper format
-:meth:`PaperSize`                    Return width, height for a known paper format
-:meth:`PaperSizes`                   Dictionary of pre-defined paper formats
-:meth:`PlanishLine`                  Matrix to map a line to the x-axis
-:meth:`RecoverCharQuad`              Compute the quad of a char ("rawdict")
-:meth:`RecoverLineQuad`              Compute the quad of a subset of line spans
-:meth:`RecoverQuad`                  Compute the quad of a span ("dict", "rawdict")
-:meth:`RecoverSpanQuad`              Compute the quad of a subset of span characters
-:meth:`Unicode2GlyphName`            Return glyph name from a unicode
-:meth:`MakeAnnotDA`                  Passing color, fontname, fontsize into the annotation
-:meth:`AddAnnotId`                   Add a unique /NM key to an annotation or widget
-:meth:`AddOcObject`                  Add OC object reference to a dictionary
-:meth:`ColorCount`                   Return count of each color
-:meth:`BinFromBuffer`                Turn FzBuffer into a byte[]
-:meth:`BufferFromBytes`              Make FzBuffer from a byte[] object
-:meth:`CalcImageMatrix`              Compute image insertion matrix
-:meth:`CompressBuffer`               Compress FzBuffer into a new buffer
-:meth:`GetPdfString`                 Make a PDF-compatible string
-:meth:`ConstructLabel`               Construct a label based on style, prefix and page number
-:meth:`DecodeRawUnicodeEscape`       Decode raw unicode
-:meth:`DoLinks`                      Insert links contained in copied page range into destination PDF
-:meth:`EnsureIdentity`               Store ID in PDF trailer
-:meth:`ExpandFontName`               Make /DA string of annotation
-:meth:`GetId`                        Count numbers and return unique id on one process
-:meth:`GetAllContents`               All /Contents streams concatenated to one bytes object
-:meth:`GetAnnotByName`               Retrieve annotation by name (/NM key)
-:meth:`GetArea`                      Calculate area of rectangle
-:meth:`GetBorderStyle`               Return `int` meaning PdfObj "border style" from string type
-:meth:`GetColors`                    Retrieve the red, green, blue triple of a color name
-:meth:`GetColorHSV`                  Retrieve the hue, saturation, value triple of a color name
-:meth:`GetColorInfoList`             Returns Tuples containing color name, red, green, blue color values
-:meth:`GetDestString`                Calculate the PDF action string
-:meth:`GetFieldTypeText`             Returns field type string from `int` type
-:meth:`GetFontProperties`            Returns properties of the font having xref in PDF
-:meth:`GetGlyphText`                 Adobe Glyph List function
-:meth:`GetImageExtension`            Return extension for MuPDF image type
-:meth:`GetLinkText`                  Define skeletons for `/Annots` object texts
-:meth:`GetTextWithLayout`            Retrieves the text content of a page that retains layout.
-:meth:`GetTables`                    Return the tables detected from a `Page` instance
-:meth:`GetWidgetProperties`          Populate a Widget object with the values from a PDF form field
-:meth:`InsertContents`               Insert a buffer as a new separate `/Contents` object of a page
-:meth:`Integer2Letter`               Return letter sequence string for integer `i`
-:meth:`Integer2Roman`                Return roman numeral for integer `i`
-:meth:`MeasureString`                Calculate the width of the text
-:meth:`MergeRange`                   Copy a range of pages (spage, epage) from a source PDF to a specified location (apage) of the target PDF
-:meth:`NormalizeRotation`            Return normalized /Rotate value:one of 0, 90, 180, 270
-:meth:`RuleDict`                     Make a Label from a PDF page label rule
-:meth:`ReadBarcodes`                 Reads bardcodes from a `Page` instance
-:meth:`WriteBarcode`                 Writes a barcode to an image file
-:meth:`GetBarcodePixmap`             Creates a barcode as a `Pixmap` object.
-:meth:`ReplaceBytes`                 Replaces bytes from a source buffer
-:attr:`TESSDATA_PREFIX`              A copy of `os.environ["TESSDATA_PREFIX"]`
-==================================== ==============================================================
+======================================================= ==============================================================
+**Function**                                            **Short Description**
+======================================================= ==============================================================
+:meth:`Utils.ConversionHeader`                          Return header string for GetText methods
+:meth:`Utils.sRGB2Rgb`                                  Convenience function returning a color (red, green, blue) for a given *sRGB* color integer
+:meth:`Utils.ConversionTrailer`                         Return trailer string for GetText methods
+:meth:`Utils.EMPTY_IRECT`                               Return the (standard) empty / invalid rectangle
+:meth:`Utils.EMPTY_QUAD`                                Return the (standard) empty / invalid quad
+:meth:`Utils.EMPTY_RECT`                                Return the (standard) empty / invalid rectangle
+:meth:`Utils.INFINITE_IRECT`                            Return the (only existing) infinite rectangle
+:meth:`Utils.INFINITE_QUAD`                             Return the (only existing) infinite quad
+:meth:`Utils.INFINITE_RECT`                             Return the (only existing) infinite rectangle
+:meth:`Utils.GetPdfNow`                                 Return the current timestamp in PDF format
+:meth:`Utils.GetPdfString`                              Return PDF-compatible string
+:meth:`Utils.GetTextLength`                             Return string length for a given font & :data:`fontsize`
+:meth:`Utils.GlyphName2Unicode`                         Return unicode from a glyph name
+:meth:`Utils.GetImageProfile`                           Return a dictionary of basic image properties
+:meth:`Utils.PaperRect`                                 Return rectangle for a known paper format
+:meth:`Utils.PaperSize`                                 Return width, height for a known paper format
+:attr:`Utils.PaperSizes`                                Dictionary of pre-defined paper formats
+:meth:`Utils.PlanishLine`                               Matrix to map a line to the x-axis
+:meth:`Utils.RecoverCharQuad`                           Compute the quad of a char ("rawdict")
+:meth:`Utils.RecoverLineQuad`                           Compute the quad of a subset of line spans
+:meth:`Utils.RecoverQuad`                               Compute the quad of a span ("dict", "rawdict")
+:meth:`Utils.RecoverSpanQuad`                           Compute the quad of a subset of span characters
+:meth:`Utils.Unicode2GlyphName`                         Return glyph name from a unicode
+:meth:`Utils.MakeAnnotDA`                               Passing color, fontname, fontsize into the annotation
+:meth:`Utils.AddAnnotId`                                Add a unique /NM key to an annotation or widget
+:meth:`Utils.AddOcObject`                               Add OC object reference to a dictionary
+:meth:`Utils.ColorCount`                                Return count of each color
+:meth:`Utils.BinFromBuffer`                             Turn FzBuffer into a byte[]
+:meth:`Utils.BufferFromBytes`                           Make FzBuffer from a byte[] object
+:meth:`Utils.CalcImageMatrix`                           Compute image insertion matrix
+:meth:`Utils.CompressBuffer`                            Compress FzBuffer into a new buffer
+:meth:`Utils.ConstructLabel`                            Construct a label based on style, prefix and page number
+:meth:`Utils.DecodeRawUnicodeEscape` Decode raw unicode 
+:meth:`Utils.DoLinks`                                   Insert links contained in copied page range into destination PDF
+:meth:`Utils.EnsureIdentity`                            Store ID in PDF trailer
+:meth:`Utils.ExpandFontName`                            Make /DA string of annotation
+:meth:`Utils.GetId`                                     Count numbers and return unique id on one process
+:meth:`Utils.GetAllContents`                            All /Contents streams concatenated to one bytes object
+:meth:`Utils.GetAnnotByName`                            Retrieve annotation by name (/NM key)
+:meth:`Utils.GetArea`                                   Calculate area of rectangle
+:meth:`Utils.GetBorderStyle`                            Return `int` meaning ``PdfObj`` "border style" from string type
+:meth:`Utils.GetColors`                                 Retrieve the red, green, blue triple of a color name
+:meth:`Utils.GetColorHSV`                               Retrieve the hue, saturation, value triple of a color name
+:meth:`Utils.GetColorInfoList`                          Returns Tuples containing color name, red, green, blue color values
+:meth:`Utils.GetDestString`                             Calculate the PDF action string
+:meth:`Utils.GetFieldTypeText`                          Returns field type string from `int` type
+:meth:`Utils.GetFontProperties`                         Returns properties of the font having xref in PDF
+:meth:`Utils.GetGlyphText`                              Adobe Glyph List function
+:meth:`Utils.GetImageExtension`                         Return extension for MuPDF image type
+:meth:`Utils.GetLinkText`                               Define skeletons for `/Annots` object texts
+:meth:`Utils.GetTextWithLayout`                         Retrieves the text content of a page that retains layout.
+:meth:`Utils.GetTables`                                 Return the tables detected from a `Page` instance
+:meth:`Utils.GetWidgetProperties`                       Populate a Widget object with the values from a PDF form field
+:meth:`Utils.InsertContents`                            Insert a buffer as a new separate `/Contents` object of a page
+:meth:`Utils.Integer2Letter`                            Return letter sequence string for integer `i`
+:meth:`Utils.Integer2Roman`                             Return roman numeral for integer `i`
+:meth:`Utils.MeasureString`                             Calculate the width of the text
+:meth:`Utils.MergeRange`                                Copy a range of pages (spage, epage) from a source PDF to a specified location (apage) of the target PDF
+:meth:`Utils.NormalizeRotation`                         Return normalized /Rotate value:one of 0, 90, 180, 270
+:meth:`Utils.RuleDict`                                  Make a Label from a PDF page label rule
+:meth:`Utils.ReadBarcodes`                              Reads barcodes from a `Page` instance
+:meth:`Utils.WriteBarcode`                              Writes a barcode to an image file
+:meth:`Utils.GetBarcodePixmap`                          Creates a barcode as a `Pixmap` object.
+:meth:`Utils.ReplaceBytes`                              Replaces bytes from a source buffer
+:meth:`Utils.UseLayout`                                 Enable or disable the layout analysis pipeline
+:attr:`Utils.LayoutAvailable`                           Whether a layout provider is currently registered
+:attr:`Utils.LayoutEnabled`                             Whether the layout analysis pipeline is enabled
+:attr:`Utils.RapidOcrAvailable`                         Whether RapidOCR initialized successfully
+:meth:`Utils.LlamaMarkdownReader`                       LlamaIndex-compatible PDF markdown reader
+:meth:`Utils.GetKeyValues`                              Extract form fields and their values
+:meth:`Utils.MarkdownToPdf`                             Render a Markdown file to PDF
+:meth:`Utils.ToMarkdown`                                Convert a document or path to Markdown
+:meth:`Utils.LoadAiAsync`                               Load, chunk, embed, and index PDFs for AI/RAG
+:meth:`Utils.CreateDevelopmentAiOptions`                In-memory AI pipeline options for samples 
+:attr:`Utils.TESSDATA_PREFIX`                           Tesseract language-data folder, from the environment
+======================================================= ==============================================================
 
 
 **Class API**
@@ -117,9 +125,9 @@ Yet others are handy, general-purpose utilities.
 
       Convenience function returning a PDF color triple (red, green, blue) for a given sRGB color integer as it occurs in :meth:`Page.GetText` dictionaries "dict" and "rawdict".
 
-      :arg int srgb: an integer of format RRGGBB, where each color component is an integer in range(255).
+      :arg int srgb: an integer of format RRGGBB, where each color component is an integer from 0 through 255.
 
-      :returns: a tuple (red, green, blue) with float items in interval *0 <= item <= 1* representing the same color. Example `sRGB2Pdf(0xff0000) = (1, 0, 0)` (red).
+      :returns: a tuple (red, green, blue) with float items in interval *0 <= item <= 1* representing the same color. Example ``sRGB2Pdf(0xff0000)`` is ``(1, 0, 0)`` (red).
 
 
 
@@ -127,9 +135,9 @@ Yet others are handy, general-purpose utilities.
 
       Convenience function returning a color (red, green, blue) for a given *sRGB* color integer.
 
-      :arg int srgb: an integer of format RRGGBB, where each color component is an integer in range(255).
+      :arg int srgb: an integer of format RRGGBB, where each color component is an integer from 0 through 255.
 
-      :returns: a tuple (red, green, blue) with integer items in `range(256)` representing the same color. Example `sRGB2Pdf(0xff0000) = (255, 0, 0)` (red).
+      :returns: a tuple (red, green, blue) with integer items from 0 through 255 representing the same color. Example ``sRGB2Rgb(0xff0000)`` is ``(255, 0, 0)`` (red).
 
 
 
@@ -148,10 +156,10 @@ Yet others are handy, general-purpose utilities.
 
       Return the glyph name of a unicode number, based on the **Adobe Glyph List**.
 
-      :arg int ch: the unicode given by e.g. `ord("ß")`. The function is based on the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_.
+      :arg int ch: the unicode given by e.g. ``(int)'ß'``. The function is based on the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_.
 
       :rtype: `string`
-      :returns: the glyph name. E.g. `Utils.Unicode2GlyphName(Convert.Int32("Ä"))` returns `'Adieresis'`.
+      :returns: the glyph name. E.g. :meth:`Utils.Unicode2GlyphName` with ``(int)'Ä'`` returns ``"Adieresis"``.
 
 
 
@@ -165,7 +173,7 @@ Yet others are handy, general-purpose utilities.
       :rtype: :ref:`Matrix`
       :returns: a matrix which combines a rotation and a translation
 
-         .. image:: images/img-planish.png
+         .. image:: ../images/img-planish.png
             :scale: 40
 
 
@@ -178,9 +186,11 @@ Yet others are handy, general-purpose utilities.
 
    .. attribute:: TESSDATA_PREFIX
 
-      Copy of `os.environ["TESSDATA_PREFIX"]` for convenient checking whether there is integrated Tesseract OCR support.
+      Copy of ``Environment.GetEnvironmentVariable("TESSDATA_PREFIX")`` for convenient checking whether there is integrated Tesseract OCR support.
 
-      If this attribute is `None`, Tesseract-OCR is either not installed, or the environment variable is not set to point to Tesseract's language support folder.
+      If this attribute is ``null``, Tesseract-OCR is either not installed, or the environment variable is not set to point to Tesseract's language support folder. When it is ``null`` but Tesseract is installed, the ``tessdata`` folder may still be locatable; otherwise OCR methods have no language data.
+
+      The folder name can be used as parameter ``tessdata`` in methods :meth:`Page.GetTextPageOcr`, :meth:`Pixmap.SavePdfOCR` and :meth:`Pixmap.PdfOCR2Bytes`.
 
       .. note:: This variable is now checked before OCR functions are tried. This prevents verbose messages from MuPDF.
 
@@ -200,7 +210,7 @@ Yet others are handy, general-purpose utilities.
       Calculate the length of text on output with a given **built in** font, :data:`fontSize` and encoding.
 
       :arg string text: the text string.
-      :arg string fontName: the fontName. Must be one of either the :ref:`Base-14-Fonts` or the CJK fonts, identified by their "reserved" fontnames (see table in :meth:`Page.InsertFont`).
+      :arg string fontName: the fontName. Must be one of either the :ref:`Base-14 fonts <inbuilt_fonts>` or the CJK fonts, identified by their "reserved" fontnames (see table in :meth:`Page.InsertFont`).
       :arg float fontSize: the :data:`fontSize`.
       :arg int encoding: the encoding to use. Besides 0 = Latin, 1 = Greek and 2 = Cyrillic (Russian) are available. Relevant for Base-14 fonts "Helvetica", "Courier" and "Times" and their variants only. Make sure to use the same value as in the corresponding text insertion.
       :rtype: `float`
@@ -208,7 +218,7 @@ Yet others are handy, general-purpose utilities.
 
       .. note:: This function will only do the calculation -- it won't insert font nor text.
 
-      .. note:: The :ref:`Font` class offers a similar method, :meth:`Font.text_length`, which supports Base-14 fonts and any font with a character map (CMap, Type 0 fonts).
+      .. note:: The :ref:`Font` class offers a similar method, :meth:`Font.TextLength`, which supports Base-14 fonts and any font with a character map (CMap, Type 0 fonts).
 
       .. warning:: If you use this function to determine the required rectangle width for the (:ref:`Page` or :ref:`Shape`) *InsertTextbox* methods, be aware that they calculate on a **by-character level**.
 
@@ -224,15 +234,16 @@ Yet others are handy, general-purpose utilities.
       :returns: PDF-compatible string enclosed in either *()* or *<>*.
 
 
-   .. method:: GetImageProfile(byte[] stream)
+   .. method:: GetImageProfile(byte[] image, int keepImage: 0)
 
       Show important properties of an image provided as a memory area. Its main purpose is to avoid using other libraries just to determine them.
 
-      :arg byte[] stream: either an image in memory or an **opened** file. An image in memory may be any of the formats `bytes`.
+      :arg byte[] image: image bytes in memory (any format MuPDF can decode).
+      :arg int keepImage: when non-zero, include the native image handle in the result. Default 0.
 
-      :rtype: `ImageInfo`
+      :rtype: :class:`ImageInfo`
       :returns:
-         No exception is ever raised. In case of an error, `None` is returned. Otherwise, there are the following items::
+         No exception is ever raised. In case of an error, ``null`` is returned. Otherwise, there are the following items::
 
          There is the following relation to **Exif** information encoded in `orientation`, and correspondingly in the `transform` matrix-like (quoted from MuPDF documentation, *ccw* = counter-clockwise):
 
@@ -249,8 +260,8 @@ Yet others are handy, general-purpose utilities.
 
          .. note::
 
-            * For some "exotic" images (FAX encodings, RAW formats and the like), this method will not work. You can however still work with such images in MupDF.NET, e.g. by using :meth:`Document.ExtractImage` or create pixmaps via `Pixmap(doc, xref)`. These methods will automatically convert exotic images to the PNG format before returning results.
-            * You can also get the properties of images embedded in a PDF, via their :data:`xref`. In this case make sure to extract the raw stream: `Utils.GetImageProfile(doc.GetXrefStreamRaw(xref))`.
+            * For some "exotic" images (FAX encodings, RAW formats and the like), this method will not work. You can however still work with such images in MuPDF.NET, e.g. by using :meth:`Document.ExtractImage` or create pixmaps with ``new Pixmap(doc, xref)``. These methods will automatically convert exotic images to the PNG format before returning results.
+            * You can also get the properties of images embedded in a PDF, via their :data:`xref`. In this case make sure to extract the raw stream: :meth:`Utils.GetImageProfile` on :meth:`Document.GetXrefStreamRaw` of that xref.
             * Images as returned by the image blocks of :meth:`Page.GetText` using "dict" or "rawdict" options are also supported.
 
 
@@ -279,7 +290,7 @@ Yet others are handy, general-purpose utilities.
 
       Compute the quadrilateral of a text span extracted via options "dict" or "rawdict" of :meth:`Page.GetText`.
 
-      :arg (float, float) lineDir: `line["dir"]` of the owning line.  Use `None` for a span from :meth:`Page.GetTextTrace`.
+      :arg (float, float) lineDir: ``(cos, sin)`` direction of the owning line.
       :arg Span span: the span.
       :returns: the :ref:`Quad` of the span, usable for text marker annotations ('Highlight', etc.).
 
@@ -288,38 +299,32 @@ Yet others are handy, general-purpose utilities.
 
       Compute the quadrilateral of a text character extracted via option "rawdict" of :meth:`Page.GetText`.
 
-      :arg (float, float) lineDir: `line["dir"]` of the owning line. Use `None` for a span from :meth:`Page.GetTextTrace`.
+      :arg (float, float) lineDir: ``(cos, sin)`` direction of the owning line.
       :arg Span span: the span.
       :arg Char char: the character.
       :returns: the :ref:`Quad` of the character, usable for text marker annotations ('Highlight', etc.).
 
 
-   .. method:: RecoverSpanQuad((float, float) lineDir, Span span, Char[] chars: None)
+   .. method:: RecoverSpanQuad((float cos, float sin) lineDir, Dictionary<string, object> span, List<Dictionary<string, object>> chars: null, bool smallGlyphHeights: false)
 
       Compute the quadrilateral of a subset of characters of a span extracted via option "rawdict" of :meth:`Page.GetText`.
 
-      :arg (float, float) lineDir: `line["dir"]` of the owning line. Use `None` for a span from :meth:`Page.GetTextTrace`.
-      :arg Span span: the span.
-      :arg Char[] chars: the characters to consider. If given, the selected extraction option must be "rawdict".
+      :arg lineDir: ``(float cos, float sin)``, from ``line["dir"]`` of the owning line.
+      :arg Dictionary<string, object> span: the span dictionary.
+      :arg List<Dictionary<string, object>> chars: the characters to consider. ``null`` returns the full span quad. If given, the selected extraction option must be "rawdict".
+      :arg bool smallGlyphHeights: use font size only as glyph height.
       :returns: the :ref:`Quad` of the selected characters, usable for text marker annotations ('Highlight', etc.).
 
 
-   .. method:: RecoverLineQuad(Line line, List<Span> spans: None)
+   .. method:: RecoverLineQuad(Line line, List<Span> spans: null, bool smallGlyphHeights: false)
+               RecoverLineQuad(Dictionary<string, object> line, List<Dictionary<string, object>> spans: null, bool smallGlyphHeights: false)
 
       Compute the quadrilateral of a subset of spans of a text line extracted via options "dict" or "rawdict" of :meth:`Page.GetText`.
 
-      :arg Line line: the line.
-      :arg Span[] spans: a sub-list of `line.Spans`. If omitted, the full line quad will be returned.
+      :arg Line line: the line, or a ``Dictionary<string, object>`` line from text extraction.
+      :arg List<Span> spans: a sub-list of ``line.Spans``. ``null`` returns the full line quad.
+      :arg bool smallGlyphHeights: use font size only as glyph height.
       :returns: the :ref:`Quad` of the selected line spans, usable for text marker annotations ('Highlight', etc.).
-
-
-   .. attr:: TESSDATA_PREFIX
-
-      Return the name of Tesseract's language support folder. Use this function if the environment variable `TESSDATA_PREFIX` has not been set.
-
-      :returns: `os.getenv("TESSDATA_PREFIX")` if not `None`. Otherwise, if Tesseract-OCR is installed, locate the name of `tessdata`. If no installation is found, return `false`.
-
-         The folder name can be used as parameter `tessdata` in methods :meth:`Page.GetTextPageOcr`, :meth:`Pixmap.SavePdfOCR` and :meth:`Pixmap.PdfOCR2Bytes`.
 
 
    .. method:: INFINITE_QUAD()
@@ -337,7 +342,7 @@ Yet others are handy, general-purpose utilities.
 
    .. method:: EMPTY_IRECT()
 
-      Return the "standard" empty and invalid rectangle `Rect(2147483520.0, 2147483520.0, -2147483648.0, -2147483648.0)` resp. quad. Its top-left and bottom-right point values are reversed compared to the infinite rectangle. It will e.g. be used to indicate empty bboxes in `page.get_text("dict")` dictionaries. There are however infinitely many empty or invalid rectangles.
+      Return the "standard" empty and invalid rectangle `Rect(2147483520.0, 2147483520.0, -2147483648.0, -2147483648.0)` resp. quad. Its top-left and bottom-right point values are reversed compared to the infinite rectangle. It will e.g. be used to indicate empty bboxes in :meth:`Page.GetText` ``"dict"`` dictionaries. There are however infinitely many empty or invalid rectangles.
 
 
    .. method:: CalcImageMatrix(int width, int height, Rect tr, float rotate, bool keep)
@@ -352,6 +357,58 @@ Yet others are handy, general-purpose utilities.
       
       :returns: `Matrix`
 
+
+
+   .. method:: MakeAnnotDA(PdfAnnot annot, int nCol, float[] col, string fontName, float fontSize)
+
+      Write the annotation default appearance (``/DA``) from color, font name, and font size.
+
+      :arg annot: the native ``PdfAnnot``.
+      :arg int nCol: number of color components (0, 1, 3, or 4).
+      :arg float[] col: the color values.
+      :arg string fontName: font name used in the ``/DA`` string.
+      :arg float fontSize: font size used in the ``/DA`` string.
+
+
+   .. method:: AddAnnotId(PdfAnnot annot, string stem)
+
+      Add a unique ``/NM`` key to an annotation or widget.
+
+      :arg annot: the native ``PdfAnnot``.
+      :arg string stem: prefix for the generated name.
+
+
+   .. method:: AddOcObject(PdfDocument pdf, PdfObj reference, int xref)
+
+      Add an optional-content object reference to a dictionary.
+
+      :arg pdf: the native ``PdfDocument``.
+      :arg reference: the ``PdfObj`` dictionary to update.
+      :arg int xref: xref of the :data:`OCG` / :data:`OCMD`.
+
+
+   .. method:: BinFromBuffer(FzBuffer buffer)
+
+      Copy an ``FzBuffer`` into a ``byte[]``.
+
+      :arg FzBuffer buffer: source buffer.
+      :rtype: ``byte[]``
+
+
+   .. method:: BufferFromBytes(byte[] data)
+
+      Make an ``FzBuffer`` from a ``byte[]``.
+
+      :arg byte[] data: source bytes.
+      :rtype: ``FzBuffer``
+
+
+   .. method:: CompressBuffer(FzBuffer inbuffer)
+
+      Compress an ``FzBuffer`` into a new buffer.
+
+      :arg FzBuffer inbuffer: source buffer.
+      :rtype: ``FzBuffer``
 
 
    .. method:: ColorCount(FzPixmap pm, dynamic clip)
@@ -369,7 +426,7 @@ Yet others are handy, general-purpose utilities.
 
       Construct a label based on style, prefix and page number.
 
-      :arg string style: type of style for label. That includes `D`, `r`, `R`, `a`, `A`.
+      :arg string style: type of style for label. That includes ``D``, ``r``, ``R``, ``a``, ``A``.
       :arg string prefix: added prefix to label
       :arg int pno: translate `pno` to letter according to the style
 
@@ -431,8 +488,8 @@ Yet others are handy, general-purpose utilities.
       :arg Page page: Page object containing annotations.
       :arg string name: annotation name. Looping annotations in page, that find the annotation which has name as `ID`.
 
-      :rtype: `PdfAnnot`
-      :returns: PdfAnnot object that has the name.
+      :rtype: ``PdfAnnot``
+      :returns: native ``PdfAnnot`` that has the name.
 
 
 
@@ -450,7 +507,7 @@ Yet others are handy, general-purpose utilities.
 
    .. method:: GetBorderStyle(string style)
 
-      Return int meaning `PdfObj` "border style" from string type.
+      Return int meaning ``PdfObj`` "border style" from string type.
 
       :arg string style: border type in format of style. style can be one of 'B', 'D', 'I', 'U', 'S' or lowercases.
       :returns: return int from border pdfobj.
@@ -486,7 +543,7 @@ Yet others are handy, general-purpose utilities.
       :arg int xref: the :data:`xref` of the link pdfobj.
       :arg int dDict: one parameter of coordinate positioned in PDF
       :arg float dDict: one parameter of coordinate positioned in PDF
-      :arg LinkInfo dDict: link info contains 'Kind', 'From', 'To', 'Page', 'Xref', ...
+      :arg dDict: a :class:`LinkInfo` with Kind, From, To, Page, Xref, ...
 
       :returns: string of PDF action
 
@@ -519,7 +576,7 @@ Yet others are handy, general-purpose utilities.
    
    .. method:: GetLinkText(Page page, LinkInfo link)
 
-      Define skeletons for /Annots object texts
+      Define skeletons for /Annots object texts. *link* is a :class:`LinkInfo`.
 
       :returns: annot string.
 
@@ -537,13 +594,13 @@ Yet others are handy, general-purpose utilities.
       :return: a string containing the text with layout applied.
 
 
-   .. method:: GetTables(Page page, Rect clip: null,  string strategy: null, string vertical_strategy: "lines", string horizontal_strategy: "lines", List<Line> add_lines: null, List<Edge> vertical_lines: null, List<Edge> horizontal_lines: null, float snap_tolerance: TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE, float snap_x_tolerance: 0.0f, float snap_y_tolerance: 0.0f, float join_tolerance: TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE, float join_x_tolerance: 0.0f, float join_y_tolerance: 0.0f, float edge_min_length: 3.0f, float min_words_vertical: TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL, float min_words_horizontal: TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL, float intersection_tolerance: 3.0f, float intersection_x_tolerance: 0.0f, float intersection_y_tolerance: 0.0f, float text_tolerance: 3.0f, float text_x_tolerance: 3.0f, float text_y_tolerance: 3.0f)
+   .. method:: GetTables(Page page, Rect clip: null, string vertical_strategy: "lines", string horizontal_strategy: "lines", List<Edge> vertical_lines: null, List<Edge> horizontal_lines: null, float snap_tolerance: TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE, float snap_x_tolerance: 0.0f, float snap_y_tolerance: 0.0f, float join_tolerance: TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE, float join_x_tolerance: 0.0f, float join_y_tolerance: 0.0f, float edge_min_length: 3.0f, float min_words_vertical: TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL, float min_words_horizontal: TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL, float intersection_tolerance: 3.0f, float intersection_x_tolerance: 0.0f, float intersection_y_tolerance: 0.0f, float text_tolerance: 3.0f, float text_x_tolerance: 3.0f, float text_y_tolerance: 3.0f, string strategy: null, List<Line> add_lines: null, bool use_layout: true, bool union: false, bool refine: false)
 
       Find tables on the page and return a list with related information. Typically, the default values of the many parameters will be sufficient. Adjustments should ever only be needed in corner case situations.
 
       :arg Page page: The page instance to use for table detection.
 
-      :arg Rect clip: specify a region to consider within the page rectangle and ignore the rest. Default `null` is the full page.
+      :arg Rect clip: specify a region to consider within the page rectangle and ignore the rest. Default ``null`` is the full page.
 
       :arg str strategy: Request a **table detection** strategy. Valid values are "lines", "lines_strict" and "text".
 
@@ -551,28 +608,36 @@ Yet others are handy, general-purpose utilities.
 
          Strategy **"lines_strict"** ignores borderless rectangle vector graphics. Sometimes single text pieces have background colors which may lead to false columns or lines. This strategy ignores them and can thus increase detection precision.
 
-         If **"text"** is specified, text positions are used to generate "virtual" column and / or row boundaries. Use `min_words_*` to request the number of words for considering their coordinates.
+         If **"text"** is specified, text positions are used to generate "virtual" column and / or row boundaries. Use ``min_words_vertical`` / ``min_words_horizontal`` to request the number of words for considering their coordinates.
 
-         Use parameters `vertical_strategy` and `horizontal_strategy` **instead** for a more fine-grained treatment of the dimensions.
+         Use parameters ``vertical_strategy`` and ``horizontal_strategy`` **instead** for a more fine-grained treatment of the dimensions.
 
-      :arg List<Line> add_lines: Specify a list of "lines" (i.e. pairs of `Line` objects) as **additional**, "virtual" vector graphics. These lines may help with table and / or cell detection and will not otherwise influence the detection strategy. Especially, in contrast to parameters `horizontal_lines` and `vertical_lines`, they will not prevent detecting rows or columns in other ways. These lines will be treated exactly like "real" vector graphics in terms of joining, snapping, intersectiing, minimum length and containment in the `clip` rectangle. Similarly, lines not parallel to any of the coordinate axes will be ignored.
+      :arg string vertical_strategy: vertical grid detection strategy. Same values as ``strategy``. Default ``"lines"``.
+      :arg string horizontal_strategy: horizontal grid detection strategy. Same values as ``strategy``. Default ``"lines"``.
+      :arg List<Edge> vertical_lines: explicit vertical edges when the strategy is ``"explicit"``.
+      :arg List<Edge> horizontal_lines: explicit horizontal edges when the strategy is ``"explicit"``.
+      :arg List<Line> add_lines: additional ``Line`` objects considered during detection.
 
-      :arg float snap_tolerance: Any two horizontal lines whose y-values differ by no more than this value will be **snapped** into one. Accordingly for vertical lines. Default is 3. Separate values can be specified instead for the dimensions, using `snap_x_tolerance` and `snap_y_tolerance`.
+      :arg float snap_tolerance: Any two horizontal lines whose y-values differ by no more than this value will be **snapped** into one. Accordingly for vertical lines. Default is 3. Separate values can be specified instead for the dimensions, using ``snap_x_tolerance`` and ``snap_y_tolerance``.
 
-      :arg float join_tolerance: Any two lines will be **joined** to one if the end and the start points differ by no more than this value (in points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `join_x_tolerance` and `join_y_tolerance`.
+      :arg float join_tolerance: Any two lines will be **joined** to one if the end and the start points differ by no more than this value (in points). Default is 3. Instead of this value, separate values can be specified for the dimensions using ``join_x_tolerance`` and ``join_y_tolerance``.
 
       :arg float edge_min_length: Ignore a line if its length does not exceed this value (points). Default is 3.
 
-      :arg int min_words_vertical: relevant for vertical strategy option "text": at least this many words must coincide to establish a **virtual column** boundary.
+      :arg float min_words_vertical: relevant for vertical strategy option "text": at least this many words must coincide to establish a **virtual column** boundary.
 
-      :arg int min_words_horizontal: relevant for horizontal strategy option "text": at least this many words must coincide to establish a **virtual row** boundary.
+      :arg float min_words_horizontal: relevant for horizontal strategy option "text": at least this many words must coincide to establish a **virtual row** boundary.
 
-      :arg float intersection_tolerance: When combining lines into cell borders, orthogonal lines must be within this value (points) to be considered intersecting. Default is 3. Instead of this value, separate values can be specified for the dimensions using `intersection_x_tolerance` and `intersection_y_tolerance`.
+      :arg float intersection_tolerance: When combining lines into cell borders, orthogonal lines must be within this value (points) to be considered intersecting. Default is 3. Instead of this value, separate values can be specified for the dimensions using ``intersection_x_tolerance`` and ``intersection_y_tolerance``.
 
-      :arg float text_tolerance: Characters will be combined into words only if their distance is no larger than this value (points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `text_x_tolerance` and `text_y_tolerance`.
+      :arg float text_tolerance: Characters will be combined into words only if their distance is no larger than this value (points). Default is 3. Instead of this value, separate values can be specified for the dimensions using ``text_x_tolerance`` and ``text_y_tolerance``.
+
+      :arg bool use_layout: when ``true``, use the layout pipeline for table detection. Default ``true``.
+      :arg bool union: when ``true``, fuse layout tables with line-based tables.
+      :arg bool refine: when ``true``, attach span placements to detected tables.
 
       :rtype: List
-      :return: a list of `Table`
+      :return: a list of ``Table``
 
 
    .. method:: GetWidgetProperties(Annot annot, Widget widget)
@@ -633,7 +698,7 @@ Yet others are handy, general-purpose utilities.
       Make a Label from a PDF page label rule.
 
       :arg Tuple(int, string) item: a tuple (pno, rule) with the start page number and the rule string like <</S/D...>>.
-      :returns: a label struct :data:`Label`
+      :returns: ``Dictionary<string, object>`` with keys ``startpage``, ``prefix``, ``style``, ``firstpagenum``. See :class:`Label` for the object form.
 
 
 
@@ -754,6 +819,126 @@ Yet others are handy, general-purpose utilities.
       :arg byte[] replace: The bytes buffer to replace with.
       :arg int limit: The number of matches to make, defaults to 1.
 
+
+   .. method:: UseLayout(bool yes)
+
+      Enable or disable the layout analysis pipeline used by :meth:`Document.ToMarkdown`, :meth:`Document.ToJson`, :meth:`Document.ToText` and :meth:`Document.ToChunks`.
+
+      :arg bool yes: `true` turns the pipeline on and registers a layout provider when one is available. `false` turns it off.
+
+      Prefer this over setting layout flags directly. Several conversion methods require the pipeline to be on.
+
+
+   .. attribute:: LayoutEnabled
+
+      Whether the layout analysis pipeline is currently enabled.
+
+      :type: bool
+
+
+   .. attribute:: LayoutAvailable
+
+      Whether a layout provider is currently registered (the layout worker could be started).
+
+      :type: bool
+
+
+   .. attribute:: RapidOcrAvailable
+
+      `true` when RapidOCR initialized successfully on this runtime.
+
+      :type: bool
+
+
+   .. method:: LlamaMarkdownReader(Func<Dictionary<string, object>, Dictionary<string, object>> metaFilter: null)
+
+      Returns a :class:`PDFMarkdownReader` for LlamaIndex-style page documents.
+
+      :arg metaFilter: optional callback that transforms per-page metadata before documents are returned.
+
+
+   .. method:: GetKeyValues(Document doc, bool includeXrefs: false)
+              GetKeyValues(string path, bool includeXrefs: false)
+
+      Extract form fields and their current values from a PDF. Push buttons are skipped. The path overload opens the file, reads the fields, and closes it.
+
+      :arg Document doc: an open document.
+      :arg bool includeXrefs: also return the :data:`xref` of each field.
+
+      :rtype: `Dictionary<string, Dictionary<string, object>>`
+      :returns: the same structure as :meth:`Document.GetKeyValues`.
+
+
+   .. method:: ToMarkdown(Document doc, bool header: true, bool footer: true, List<int> pages: null, bool writeImages: false, bool embedImages: false, string imagePath: "", string imageFormat: "png", string filename: "", bool forceText: true, bool pageChunks: false, bool pageSeparators: false, int dpi: 150, int ocrDpi: 150, float pageWidth: 612, float? pageHeight: null, bool ignoreCode: false, bool showProgress: false, bool useOcr: true, string ocrLanguage: "eng", bool forceOcr: false, OcrPageFunction ocrFunction: null, string tableOutput: "markdown", float? edgeThreshold: null)
+              ToMarkdown(string path, bool header: true, bool footer: true, List<int> pages: null, bool writeImages: false, bool embedImages: false, string imagePath: "", string imageFormat: "png", string filename: "", bool forceText: true, bool pageChunks: false, bool pageSeparators: false, int dpi: 150, int ocrDpi: 150, float pageWidth: 612, float? pageHeight: null, bool ignoreCode: false, bool showProgress: false, bool useOcr: true, string ocrLanguage: "eng", bool forceOcr: false, OcrPageFunction ocrFunction: null, string tableOutput: "markdown", float? edgeThreshold: null)
+
+      Convert a document, or a supported file path, to Markdown. Same options as :meth:`Document.ToMarkdown`.
+
+      :arg Document doc: an open document.
+      :arg string path: path of a supported document. The file is opened, converted, and closed.
+      :arg bool header: *(layout mode)* include page-header regions in the output.
+      :arg bool footer: *(layout mode)* include page-footer regions in the output.
+      :arg List<int> pages: 0-based page numbers to process. `null` processes all pages.
+      :arg bool writeImages: write images to files in ``imagePath`` and insert Markdown image references.
+      :arg bool embedImages: embed images in the Markdown as base64 data. Cannot be combined with ``writeImages``.
+      :arg string imagePath: folder for image files written when ``writeImages`` is `true`.
+      :arg string imageFormat: image file format, for example `"png"` or `"jpg"`.
+      :arg string filename: base file name for written images.
+      :arg bool forceText: also extract text that sits on top of image regions.
+      :arg bool pageChunks: return a JSON string with one entry per page instead of a single Markdown string.
+      :arg bool pageSeparators: insert separator lines between pages.
+      :arg int dpi: resolution of extracted images.
+      :arg int ocrDpi: *(layout mode)* resolution at which pages are rendered for OCR.
+      :arg float pageWidth: *(legacy mode)* page width used to lay out reflowable documents.
+      :arg float? pageHeight: *(legacy mode)* page height for reflowable documents.
+      :arg bool ignoreCode: do not format monospaced text as code blocks.
+      :arg bool showProgress: print a progress indicator while converting.
+      :arg bool useOcr: *(layout mode)* run OCR on pages where it is likely to help.
+      :arg string ocrLanguage: *(layout mode)* Tesseract language code(s).
+      :arg bool forceOcr: *(layout mode)* OCR every page.
+      :arg OcrPageFunction ocrFunction: *(layout mode)* custom OCR callback. `null` uses the built-in OCR engine.
+      :arg string tableOutput: `"markdown"` (default) or `"html"` table rendering.
+      :arg float? edgeThreshold: *(layout mode)* optional edge threshold passed to the layout analysis.
+
+      :rtype: `string`
+      :returns: the Markdown text, or a JSON string of page chunks when *pageChunks* is `true`.
+
+
+   .. method:: MarkdownToPdf(string mdPath, string userCss: null, Rect pageRect: default, float[] margins: null, Archive archive: null, string outputPath: null)
+
+      Render a Markdown file to a PDF using :ref:`Story`.
+
+      :arg string mdPath: path to the Markdown file.
+      :arg string userCss: optional CSS applied to the Story.
+      :arg Rect pageRect: page size. Default uses the Story default page.
+      :arg float[] margins: optional page margins.
+      :arg Archive archive: optional archive for fonts and images.
+      :arg string outputPath: if set, the PDF is also written to this path.
+
+      :rtype: :class:`Document`
+      :returns: the generated PDF as an open document.
+
+
+   .. method:: LoadAiAsync(IEnumerable<string> pdfPaths, MicrosoftAIConnectorOptions options: null, CancellationToken cancellationToken: default)
+
+      Load, chunk, embed, and index PDFs for AI / RAG workflows.
+
+      :arg pdfPaths: PDF file paths to index.
+      :arg options: pipeline options. Use :meth:`CreateDevelopmentAiOptions` for samples that need no cloud keys.
+      :arg cancellationToken: optional cancellation.
+
+      :rtype: :class:`AiDocumentCollection`
+      :returns: a collection on which you can call :meth:`AiDocumentCollection.AskAsync`, :meth:`AiDocumentCollection.SummarizeAsync` and :meth:`AiDocumentCollection.SearchAsync`.
+
+
+   .. method:: CreateDevelopmentAiOptions(IChatClient chatClient: null, int embeddingDimensions: 128)
+
+      In-memory AI pipeline options for tests and samples (hash embeddings, no cloud keys).
+
+      :arg chatClient: optional chat client. Samples can pass a local ``IChatClient``.
+      :arg int embeddingDimensions: embedding size for the development hasher.
+
+      :returns: options suitable for :meth:`LoadAiAsync`.
 
 
 .. include:: ../footer.rst

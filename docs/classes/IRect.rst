@@ -50,7 +50,7 @@ IRect
 
       If another irect is specified, a **new copy** will be made.
 
-      If sequence is specified, it must be a sequence type of 4 numbers (see :ref:`SequenceTypes`). Non-integer numbers will be truncated, non-numeric values will raise an exception.
+      If sequence is specified, it must be a sequence of 4 numbers. Non-integer numbers will be truncated, non-numeric values will raise an exception.
 
       The other parameters mean integer coordinates.
 
@@ -71,7 +71,7 @@ IRect
 
    .. method:: Contains(x)
 
-      Checks whether *x* is contained in the rectangle. It may be :data:`Rect`, :data:`Point` or a number. If *x* is an empty rectangle, this is always true. Conversely, if the rectangle is empty this is always `false`, if *x* is not an empty rectangle and not a number. If *x* is a number, it will be checked to be one of the four components. *x in irect* and `irect.contains(x)` are equivalent.
+      Checks whether *x* is contained in the rectangle. It may be :data:`Rect`, :data:`Point` or a number. If *x* is an empty rectangle, this is always true. Conversely, if the rectangle is empty this is always `false`, if *x* is not an empty rectangle and not a number. If *x* is a number, it will be checked to be one of the four components. *x in irect* and :meth:`IRect.Contains` are equivalent.
 
       :arg x: the object to check.
       :type x: :ref:`IRect` or :ref:`Rect` or :ref:`Point` or int
@@ -88,7 +88,7 @@ IRect
 
    .. method:: ToRect(rect)
 
-      Compute the matrix which transforms this rectangle to a given one. See :meth:`MuPDFRect.ToRect`.
+      Compute the matrix which transforms this rectangle to a given one. See :meth:`Rect.ToRect`.
 
       :arg Rect rect: the target rectangle. Must not be empty or infinite.
       

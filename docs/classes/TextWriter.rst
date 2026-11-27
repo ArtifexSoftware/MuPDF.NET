@@ -18,7 +18,7 @@ A text writer is an elegant alternative to methods :meth:`Page.InsertText` and f
 * **Improved text positioning:** Choose any point where insertion of text should start. Storing text returns the "cursor position" after the *last character* of the span.
 * **Free font choice:** Each text span has its own font and :data:`fontSize`. This lets you easily switch when composing a larger text.
 * **Automatic fallback fonts:** If a character is not supported by the chosen font, alternative fonts are automatically searched. This significantly reduces the risk of seeing unprintable symbols in the output ("TOFUs" -- looking like a small rectangle). MuPDF.NET now also comes with the **universal font "Droid Sans Fallback Regular"**, which supports **all Latin** characters (including Cyrillic and Greek), and **all CJK** characters (Chinese, Japanese, Korean).
-* **Cyrillic and Greek Support:** The :ref:`Base-14-fonts` have integrated support of Cyrillic and Greek characters **without specifying encoding.** Your text may be a mixture of Latin, Greek and Cyrillic.
+* **Cyrillic and Greek Support:** The :ref:`Base-14 fonts <inbuilt_fonts>` have integrated support of Cyrillic and Greek characters **without specifying encoding.** Your text may be a mixture of Latin, Greek and Cyrillic.
 * **Transparency support:** Parameter *opacity* is supported. This offers a handy way to create watermark-style text.
 * **Justified text:** Supported for any font -- not just simple fonts as in :meth:`Page.InsertTextbox`.
 * **Reusability:** A TextWriter object exists independent from PDF pages. It can be written multiple times, either to the same or to other pages, in the same or in different PDFs, choosing different colors or transparency.
@@ -93,7 +93,7 @@ Using this object entails three steps:
 
 
 
-      :returns: :attr:`TextRect` and :attr:`LastPoint`. Raises an exception for an unsupported font -- checked via :attr:`Font.IsWritable`.
+      :returns: :attr:`TextWriter.TextRect` and :attr:`TextWriter.LastPoint`. Raises an exception for an unsupported font -- checked via :attr:`Font.IsWritable`.
 
 
    .. method:: Appendv(Point pos, string text, Font font: null, float fontSize: 11, string language: null, int smallCaps: 0)
@@ -107,14 +107,14 @@ Using this object entails three steps:
       :arg string language: the language to use, e.g. "en" for English. Meaningful values should be compliant with the ISO 639 standards 1, 2, 3 or 5. Reserved for future use: currently has no effect as far as we know.
       :arg bool smallCaps: see :meth:`Append`.
 
-      :returns: :attr:`TextRect` and :attr:`LastPoint`. Raises an exception for an unsupported font -- checked via :attr:`Font.IsWritable`.
+      :returns: :attr:`TextWriter.TextRect` and :attr:`TextWriter.LastPoint`. Raises an exception for an unsupported font -- checked via :attr:`Font.IsWritable`.
 
    .. method:: FillTextbox(Rect rect, string text, Point pos: null, Font font: null, float fontSize: 11, float lineHeight: 0, int align: 0, bool right2left: false, bool warn: false, bool smallCaps: false)
 
       Fill a given rectangle with text in horizontal writing mode. This is a convenience method to use as an alternative for :meth:`Append`.
 
       :arg Rect rect: the area to fill. No part of the text will appear outside of this.
-      :arg string text: the text. Can be specified as a (UTF-8) string or a list / tuple of strings. A string will first be converted to a list using *Split('\n')*. Every list item will begin on a new line (forced line breaks).
+      :arg string text: the text. Can be specified as a (UTF-8) string or a list / tuple of strings. A string will first be converted to a list using ``Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None)``. Every list item will begin on a new line (forced line breaks).
       :arg Point pos: start storing at this point. Default is a point near rectangle top-left.
       :arg Font font: the :ref:`Font`, default `new Font(fontName: ..., fontFile: ...)`.
       :arg float fontSize: the :data:`fontSize`.
@@ -132,17 +132,20 @@ Using this object entails three steps:
 
    .. note:: Use these methods as often as is required -- there is no technical limit (except memory constraints of your system). You can also mix :meth:`Append` and text boxes and have multiple of both. Text positioning is exclusively controlled by the insertion point. Therefore there is no need to adhere to any order. Raise an exception for an unsupported font -- checked via :attr:`Font.IsWritable`.
 
-   .. method:: WriteText(Page page, float opacity: -1, float[] color: null, Morph morph: null, int overlay: 1, int oc: 0, int renderMode: 0)
+   .. method:: WriteText(Page page, float[] color: null, float opacity: -1, int overlay: 1, Morph morph: null, Matrix matrix: null, int renderMode: 0, int oc: 0, Point morphFix: null, Matrix morphMat: null)
 
       Write the TextWriter text to a page, which is the only mandatory parameter. The other parameters can be used to temporarily override the values used when the TextWriter was created.
 
       :arg page: write to this :ref:`Page`.
-      :arg float opacity: override the value of the TextWriter for this output.
       :arg float[] color: override the value of the TextWriter for this output.
-      :arg Morph morph: modify the text appearance by applying a matrix to it. If provided, this must be a sequence *(P, M)* with a point-like *P* and a matrix-like *matrix*. A typical example is rotating the text around *P*.
+      :arg float opacity: override the value of the TextWriter for this output.
       :arg int overlay: put in foreground (default) or background.
-      :arg int oc: the :data:`Xref` of an :data:`OCG` or :data:`OCMD`.
+      :arg Morph morph: modify the text appearance by applying a :class:`Morph` (fixpoint plus matrix). Mutually exclusive with ``matrix`` / ``morphFix`` / ``morphMat``.
+      :arg Matrix matrix: a direct transform, mutually exclusive with ``morph``.
       :arg int renderMode: The PDF `Tr` operator value. Values: 0 (default), 1, 2, 3 (invisible).
+      :arg int oc: the :data:`Xref` of an :data:`OCG` or :data:`OCMD`.
+      :arg Point morphFix: morph fixpoint when not using :class:`Morph`.
+      :arg Matrix morphMat: morph matrix when not using :class:`Morph`.
 
          .. image:: ../images/img-rendermode.*
 
@@ -181,9 +184,9 @@ Using this object entails three steps:
 .. note:: To see some demo scripts dealing with TextWriter, have a look at `this <https://github.com/ArtifexSoftware/MuPDF.NET/tree/main/Examples/Textwriter>`_ repository.
 
   1. Opacity and color apply to **all the text** in this object.
-  2. If you need different colors / transparency, you must create a separate TextWriter. Whenever you determine the color should change, simply append the text to the respective TextWriter using the previously returned :attr:`LastPoint` as position for the new text span.
+  2. If you need different colors / transparency, you must create a separate TextWriter. Whenever you determine the color should change, simply append the text to the respective TextWriter using the previously returned :attr:`TextWriter.LastPoint` as position for the new text span.
   3. Appending items or text boxes can occur in arbitrary order: only the position parameter controls where text appears.
-  4. Font and :data:`fontSize` can freely vary within the same TextWriter. This can be used to let text with different properties appear on the same displayed line: just specify *pos* accordingly, and e.g. set it to :attr:`LastPoint` of the previously added item.
+  4. Font and :data:`fontSize` can freely vary within the same TextWriter. This can be used to let text with different properties appear on the same displayed line: just specify *pos* accordingly, and e.g. set it to :attr:`TextWriter.LastPoint` of the previously added item.
   5. You can use the *pos* argument of :meth:`TextWriter.FillTextbox` to set the position of the first text character. This allows filling the same textbox with contents from different :ref:`TextWriter` objects, thus allowing for multiple colors, opacities, etc.
   6. MuPDF does not support all fonts with this feature, e.g. no Type3 fonts. Starting with v1.18.0 this can be checked via the font attribute :attr:`Font.IsWritable`. This attribute is also checked when using :ref:`TextWriter` methods.
 

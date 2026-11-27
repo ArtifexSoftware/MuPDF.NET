@@ -13,7 +13,7 @@ There is a parent-child relationship between a document and its pages. If the do
 
 Several page methods have a :ref:`Document` counterpart for convenience. At the end of this chapter you will find a synopsis.
 
-.. note:: Many times in this chapter we are using the term **coordinate**. It is of high importance to have at least a basic understanding of what that is and that you feel comfortable with the section :ref:`Coordinates`.
+.. note:: Many times in this chapter we are using the term **coordinate**. It is of high importance to have at least a basic understanding of the page coordinate system.
 
 Modifying Pages
 ---------------
@@ -37,7 +37,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
    Reloading the page is generally recommended -- although not strictly required in all cases. However, some annotation and widget types have extended features in MuPDF.NET compared to MuPDF. More of these extensions may also be added in the future.
 
-   Releoading the page ensures all your changes have been fully applied to PDF structures, so you can safely create Pixmaps or successfully iterate over annotations, links and form fields.
+   Reloading the page ensures all your changes have been fully applied to PDF structures, so you can safely create Pixmaps or successfully iterate over annotations, links and form fields.
 
 ================================== =======================================================
 **Method / Attribute**             **Short Description**
@@ -61,12 +61,14 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.AddWidget`             PDF only: add a PDF Form field
 :meth:`Page.GetAnnotNames`         PDF only: a list of annotation (and widget) names
 :meth:`Page.GetAnnotXrefs`         PDF only: a list of annotation (and widget) xrefs
-:meth:`Page.GetAnnots`             Return a generator over the annots on the page
+:meth:`Page.Annots`                Return the annotations on the page
+:meth:`Page.GetAnnots`             Legacy name for :meth:`Page.Annots`
 :meth:`Page.ApplyRedactions`       PDF only: process the redactions of the page
 :meth:`Page.GetBound`              Rectangle of the page
 :meth:`Page.GetBboxlog`            List of rectangles that envelop text, drawing or image objects
 :meth:`Page.GetContents`           PDF only: return a list of content :data:`xref` numbers
 :meth:`Page.GetDisplayList`        Create the page's display list
+:meth:`Page.FindTables`            Detect tables and return a :class:`TableFinder`
 :meth:`Page.GetTables`             Extract the page's tables as a list
 :meth:`Page.GetTextBlocks`         Extract text blocks as a list
 :meth:`Page.GetTextWords`          Extract text words as a list
@@ -121,7 +123,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.Recolor`               PDF only: recolor page
 :meth:`Page.ReadContents`          PDF only: get complete, concatenated /Contents source
 :meth:`Page.Run`                   Run a page through a device
-:meth:`Page.SearchFor`             Search for a string
+:meth:`Page.SearchFor`             Search for a string, returning quads
+:meth:`Page.SearchForRects`        Search for a string, returning rectangles
 :meth:`Page.SetCropBox`            PDF only: modify the `/Cropbox` (visible page)
 :meth:`Page.SetArtBox`             PDF only: modify `/ArtBox`
 :meth:`Page.SetBleedBox`           PDF only: modify `/BleedBox`
@@ -153,6 +156,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :attr:`Page.TransformationMatrix`  PDF only: translate between PDF and MuPDF space
 :attr:`Page.Xref`                  PDF only: page :data:`xref`
 :attr:`Page.IsWrapped`             PDF only: check whether contents wrapping is present
+:attr:`Page.TableSettings`         Default settings for :meth:`Page.FindTables`
 ================================== =======================================================
 
 **Class API**
@@ -161,7 +165,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
    .. method:: GetBound()
 
-      Determine the rectangle of the page. Same as property :attr:`Page.Rect`. For PDF documents this **usually** also coincides with :data:`Mediabox` and :data:`CropBox`, but not always. For example, if the page is rotated, then this is reflected by this method -- the :attr:`Page.CropBox` however will not change.
+      Determine the rectangle of the page. Same as property :attr:`Page.Rect`. For PDF documents this **usually** also coincides with :attr:`Page.MediaBox` and :attr:`Page.CropBox`, but not always. For example, if the page is rotated, then this is reflected by this method -- the :attr:`Page.CropBox` however will not change.
 
       :rtype: :ref:`Rect`
 
@@ -214,7 +218,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
         The name may be abbreviated to the first two characters, like "Co" for "Cour".
         Lower case is also accepted.
         Bold or italic variants of the fonts are **not accepted**.
-        A user-contributed script provides a circumvention for this restriction -- see section *Using Buttons and JavaScript* in chapter :ref:`FAQ`.
+        A user-contributed script provides a circumvention for this restriction -- see section *Using Buttons and JavaScript*.
         The actual font to use is now determined on a by-character level, and all required fonts (or sub-fonts) are automatically included.
         Therefore, you should rarely ever need to care about this parameter and let it default (except you insist on a serifed font for your non-CJK text parts).
         
@@ -290,15 +294,17 @@ In a nutshell, this is what you can do with MuPDF.NET:
    Redactions
    ~~~~~~~~~~~
 
-   .. method:: AddRedactAnnot(Quad quad, string text, string fontName, int fontSize: 11, int align: TEXT_ALIGN_LEFT, float[] fill: (1, 1, 1), float[] textColor: (0, 0, 0), bool crossOut: true)
+   .. method:: AddRedactAnnot(Quad quad, string text: null, string fontName: null, float fontSize: 11, int align: 0, float[] fillColor: null, float[] textColor: null, bool crossOut: true)
+               AddRedactAnnot(Rect rect, string text: null, string fontName: null, float fontSize: 11, int align: 0, float[] fillColor: null, float[] textColor: null, bool crossOut: true)
       
       **PDF only**: Add a redaction annotation. A redaction annotation identifies content to be removed from the document. Adding such an annotation is the first of two steps. It makes visible what will be removed in the subsequent step, :meth:`Page.ApplyRedactions`.
 
-      :arg Quad quad: specifies the (rectangular) area to be removed which is always equal to the annotation rectangle. This may be a :data:`Rect` or :data:`Quad` object. If a quad is specified, then the enveloping rectangle is taken.
+      :arg Quad quad: specifies the area to be removed. The annotation rectangle is the enveloping rectangle of this quad.
+      :arg Rect rect: specifies the rectangular area to be removed. This overload forwards to the :data:`Quad` form.
 
       :arg string text: text to be placed in the rectangle after applying the redaction (and thus removing old content).
 
-      :arg string fontName: the font to use when *text* is given, otherwise ignored. The same rules apply as for :meth:`Page.InsertTextbox` -- which is the method :meth:`Page.ApplyRedactions` internally invokes. The replacement text will be **vertically centered**, if this is one of the CJK or :ref:`Base-14-Fonts`.
+      :arg string fontName: the font to use when *text* is given, otherwise ignored. The same rules apply as for :meth:`Page.InsertTextbox` -- which is the method :meth:`Page.ApplyRedactions` internally invokes. The replacement text will be **vertically centered**, if this is one of the CJK or :ref:`Base-14 fonts <inbuilt_fonts>`.
 
          .. note::
 
@@ -306,16 +312,16 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
 
       :arg float fontSize: the :data:`fontSize` to use for the replacing text. If the text is too large to fit, several insertion attempts will be made, gradually reducing the :data:`fontSize` to no less than 4. If then the text will still not fit, no text insertion will take place at all.
-      :arg int align: the horizontal alignment for the replacing text. See :meth:`InsertTextbox` for available values. The vertical alignment is (approximately) centered if a PDF built-in font is used (CJK or :ref:`Base-14-Fonts`).
+      :arg int align: the horizontal alignment for the replacing text. See :meth:`InsertTextbox` for available values. The vertical alignment is (approximately) centered if a PDF built-in font is used (CJK or :ref:`Base-14 fonts <inbuilt_fonts>`).
 
-      :arg float[] fill: the fill color of the rectangle **after applying** the redaction. The default is *white = (1, 1, 1)*, which is also taken if *null* is specified. To suppress a fill color altogether, specify *false*. In this cases the rectangle remains transparent.
+      :arg float[] fillColor: the fill color of the rectangle **after applying** the redaction. The default is *null*. When replacement text is given, *null* is treated as *white = (1, 1, 1)*.
 
-      :arg float[] textColor: the color of the replacing text. Default is *black = (0, 0, 0)*.
+      :arg float[] textColor: the color of the replacing text. Default is *null* (treated as *black = (0, 0, 0)* when replacement text is given).
 
       :arg bool crossOut: add two diagonal lines to the annotation rectangle.
 
       :rtype: :ref:`Annot`
-      :returns: the created annotation. Its standard appearance looks like a red rectangle (no fill color), optionally showing two diagonal lines. Colors, line width, dashing, opacity and blend mode can now be set and applied via :meth:`Annot.update` like with other annotations.
+      :returns: the created annotation. Its standard appearance looks like a red rectangle (no fill color), optionally showing two diagonal lines. Colors, line width, dashing, opacity and blend mode can now be set and applied via :meth:`Annot.Update` like with other annotations.
 
       .. image:: ../images/img-redact.*
 
@@ -351,7 +357,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
            - Be wary if the replacement is longer than the original -- this may lead to an awkward appearance, line breaks or no new text at all.
 
-           - For a number of reasons, the new text may not exactly be positioned on the same line like the old one -- especially true if the replacement font was not one of CJK or :ref:`Base-14-Fonts`.
+           - For a number of reasons, the new text may not exactly be positioned on the same line like the old one -- especially true if the replacement font was not one of CJK or :ref:`Base-14 fonts <inbuilt_fonts>`.
 
 
       ---------
@@ -370,13 +376,17 @@ In a nutshell, this is what you can do with MuPDF.NET:
       .. image:: ../images/img-polyline.*
          :scale: 70
 
-   .. method:: AddUnderlineAnnot(dynamic quads: null, Point start: null, Pint stop: null, Rect clip: null)
+   .. method:: AddUnderlineAnnot(Quad[] quads: null, Point start: null, Point stop: null, IRect clip: null)
+               AddUnderlineAnnot(Rect rect)
 
-   .. method:: AddStrikeoutAnnot(dynamic quads: null, Point start: null, Point stop: null, Rect clip: null)
+   .. method:: AddStrikeoutAnnot(Quad[] quads: null, Point start: null, Point stop: null, IRect clip: null)
+               AddStrikeoutAnnot(Rect rect)
 
-   .. method:: AddSquigglyAnnot(dynamic quads: null, Point start: null, Point stop: null, Rect clip: null)
+   .. method:: AddSquigglyAnnot(Quad[] quads: null, Point start: null, Point stop: null, IRect clip: null)
+               AddSquigglyAnnot(Rect rect)
 
-   .. method:: AddHighlightAnnot(dynamic quads: null, Point start: null, Point stop: null, Rect clip: null)
+   .. method:: AddHighlightAnnot(Quad[] quads: null, Point start: null, Point stop: null, IRect clip: null)
+               AddHighlightAnnot(Rect rect)
 
       PDF only: These annotations are normally used for **marking text** which has previously been somehow located (for example via :meth:`Page.SearchFor`). But this is not required: you are free to "mark" just anything.
 
@@ -387,7 +397,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       .. note::
         Obviously, text marker annotations need to know what is the top, the bottom, the left, and the right side of the area(s) to be marked. If the arguments are quads, this information is given by the sequence of the quad points. In contrast, a rectangle delivers much less information -- this is illustrated by the fact, that 4! = 24 different quads can be constructed with the four corners of a rectangle.
 
-        Therefore, we **strongly recommend** to use the `quads` option for text searches, to ensure correct annotations. A similar consideration applies to marking **text spans** extracted with the "dict" / "rawdict" options of :meth:`Page.GetText`. For more details on how to compute quadrilaterals in this case, see section "How to Mark Non-horizontal Text" of :ref:`FAQ`.
+        Therefore, we **strongly recommend** to use the `quads` option for text searches, to ensure correct annotations. A similar consideration applies to marking **text spans** extracted with the "dict" / "rawdict" options of :meth:`Page.GetText`.
 
       :arg Rect, Quad, List<Quad>:
         the location(s) -- rectangle(s) or quad(s) -- to be marked.
@@ -429,7 +439,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :arg bool sanitize: if true, synchronization between resources and their actual use in the contents object is snychronized. For example, if a font is not actually used for any text of the page, then it will be deleted from the `/Resources/Font` object.
 
-      .. warning:: This is a complex function which may generate large amounts of new data and render old data unused. It is **not recommended** using it together with the **incremental save** option. Also note that the resulting singleton new */Contents* object is **uncompressed**. So you should save to a **new file** using options *"deflate=True, garbage=3"*.
+      .. warning:: This is a complex function which may generate large amounts of new data and render old data unused. It is **not recommended** using it together with the **incremental save** option. Also note that the resulting singleton new */Contents* object is **uncompressed**. So you should save to a **new file** using options ``deflate: true, garbage: 3``.
    
    .. method:: AddStampAnnot(Rect rect, object stamp: null)
 
@@ -518,7 +528,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       Retrieves **all** links of a page.
 
       :rtype: List
-      :returns: A list of `LinkInfo`. For a description of the dictionary entries, see :ref:`link_dict_description`. Always use this or the :meth:`Page.GetLinks` method if you intend to make changes to the links of a page.
+      :returns: A list of :class:`LinkInfo`. For a description of the dictionary entries, see :ref:`link_dict_description`. Always use this or the :meth:`Page.GetLinks` method if you intend to make changes to the links of a page.
 
    .. method:: GetLinks()
 
@@ -530,11 +540,20 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :returns: an entry of :meth:`Page.GetLinks()` for each iteration.
 
 
+   .. method:: Annots(params AnnotationType[] types)
+
+      Return the page's annotations. With no arguments, all annotations are returned. Pass one or more :data:`AnnotationType` values to down-select.
+
+      :arg AnnotationType types: optional annotation types to include.
+
+      :rtype: IEnumerable<Annot>
+      :returns: an :ref:`Annot` for each iteration.
+
    .. method:: GetAnnots(List<PdfAnnotType> types: null)
 
-      Return a generator over the page's annotations.
+      Legacy name for :meth:`Page.Annots`.
 
-      :arg List<PdfAnnotType> types: a sequence of integers to down-select to one or more annotation types. Default is all annotations. Example: `types=(PDF_ANNOT_FREETEXT, PDF_ANNOT_TEXT)` will only return 'FreeText' and 'Text' annotations.
+      :arg List<PdfAnnotType> types: a sequence of integers to down-select to one or more annotation types. Default is all annotations.
 
       :rtype: IEnumerable
       :returns: an :ref:`Annot` for each iteration.
@@ -553,7 +572,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
          The item sequence represents the **sequence in which these commands are executed** to build the page's appearance. Therefore, if an item's bbox intersects or contains that of a previous item, then the previous item may be (partially) covered / hidden.
 
-         So this list can be used to detect such situations. An item's index in this list equals the value of a `"SeqNo"` in dictionaries as returned by :meth:`Page.GetDrawings` and :meth:`Page.GetTexttrace`.
+         So this list can be used to detect such situations. An item's index in this list equals the value of a `"SeqNo"` in dictionaries as returned by :meth:`Page.GetDrawings` and :meth:`Page.GetTextTrace`.
 
    .. method:: GetContents()
 
@@ -569,11 +588,36 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :rtype: :ref:`DisplayList`
       :returns: the display list of the page.
 
-   .. method:: GetTables(Rect clip: null,  string strategy: null, string vertical_strategy: "lines", string horizontal_strategy: "lines", List<Line> add_lines: null, List<Edge> vertical_lines: null, List<Edge> horizontal_lines: null, float snap_tolerance: TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE, float snap_x_tolerance: 0.0f, float snap_y_tolerance: 0.0f, float join_tolerance: TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE, float join_x_tolerance: 0.0f, float join_y_tolerance: 0.0f, float edge_min_length: 3.0f, float min_words_vertical: TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL, float min_words_horizontal: TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL, float intersection_tolerance: 3.0f, float intersection_x_tolerance: 0.0f, float intersection_y_tolerance: 0.0f, float text_tolerance: 3.0f, float text_x_tolerance: 3.0f, float text_y_tolerance: 3.0f)
+   .. method:: FindTables(TableSettings settings: null, IList paths: null, IList addLines: null, IList<Rect> addBoxes: null, bool useLayout: true, bool union: false, bool refine: false)
+
+      Find tables on the page and return a :class:`TableFinder`. Typically, the default :class:`TableSettings` is sufficient. Adjustments should ever only be needed in corner case situations.
+
+      :arg TableSettings settings: table-finder settings. ``null`` uses defaults (``VerticalStrategy`` / ``HorizontalStrategy`` ``"lines"``). See :class:`TableSettings`.
+      :arg IList paths: optional vector graphics (``IList<Dictionary<string, object>>``) in the format returned by :meth:`Page.GetDrawings`. When this is provided, the method does not extract vector graphics itself.
+      :arg IList addLines: extra vector lines (``IList<(Point p1, Point p2)>``) considered during detection.
+      :arg IList<Rect> addBoxes: extra vector boxes considered during detection.
+      :arg bool useLayout: when ``true``, use the layout pipeline for table detection. Default ``true``.
+      :arg bool union: when ``true``, fuse layout tables with line-based tables.
+      :arg bool refine: when ``true``, attach span placements to detected tables.
+
+      :rtype: :class:`TableFinder`
+      :return: a :class:`TableFinder`. Use :attr:`TableFinder.Tables` or the indexer to get each :class:`Table`.
+
+      .. code-block:: cs
+
+         TableFinder finder = page.FindTables();
+         foreach (Table table in finder.Tables)
+         {
+             Console.WriteLine(table.ToMarkdown());
+         }
+
+      The page also has :attr:`Page.TableSettings` for the default settings used when *settings* is ``null``.
+
+   .. method:: GetTables(Rect clip: null, string vertical_strategy: "lines", string horizontal_strategy: "lines", List<Edge> vertical_lines: null, List<Edge> horizontal_lines: null, float snap_tolerance: TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE, float snap_x_tolerance: 0.0f, float snap_y_tolerance: 0.0f, float join_tolerance: TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE, float join_x_tolerance: 0.0f, float join_y_tolerance: 0.0f, float edge_min_length: 3.0f, float min_words_vertical: TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL, float min_words_horizontal: TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL, float intersection_tolerance: 3.0f, float intersection_x_tolerance: 0.0f, float intersection_y_tolerance: 0.0f, float text_tolerance: 3.0f, float text_x_tolerance: 3.0f, float text_y_tolerance: 3.0f, string strategy: null, List<Line> add_lines: null, bool use_layout: true, bool union: false, bool refine: false)
 
       Find tables on the page and return a list with related information. Typically, the default values of the many parameters will be sufficient. Adjustments should ever only be needed in corner case situations.
 
-      :arg Rect clip: specify a region to consider within the page rectangle and ignore the rest. Default `null` is the full page.
+      :arg Rect clip: specify a region to consider within the page rectangle and ignore the rest. Default ``null`` is the full page.
 
       :arg str strategy: Request a **table detection** strategy. Valid values are "lines", "lines_strict" and "text".
 
@@ -581,42 +625,52 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
          Strategy **"lines_strict"** ignores borderless rectangle vector graphics. Sometimes single text pieces have background colors which may lead to false columns or lines. This strategy ignores them and can thus increase detection precision.
 
-         If **"text"** is specified, text positions are used to generate "virtual" column and / or row boundaries. Use `min_words_*` to request the number of words for considering their coordinates.
+         If **"text"** is specified, text positions are used to generate "virtual" column and / or row boundaries. Use ``min_words_vertical`` / ``min_words_horizontal`` to request the number of words for considering their coordinates.
 
-         Use parameters `vertical_strategy` and `horizontal_strategy` **instead** for a more fine-grained treatment of the dimensions.
+         Use parameters ``vertical_strategy`` and ``horizontal_strategy`` **instead** for a more fine-grained treatment of the dimensions.
 
-      :arg List<Line> add_lines: Specify a list of "lines" (i.e. pairs of `Line` objects) as **additional**, "virtual" vector graphics. These lines may help with table and / or cell detection and will not otherwise influence the detection strategy. Especially, in contrast to parameters `horizontal_lines` and `vertical_lines`, they will not prevent detecting rows or columns in other ways. These lines will be treated exactly like "real" vector graphics in terms of joining, snapping, intersectiing, minimum length and containment in the `clip` rectangle. Similarly, lines not parallel to any of the coordinate axes will be ignored.
+      :arg string vertical_strategy: vertical grid detection strategy. Same values as ``strategy``. Default ``"lines"``.
+      :arg string horizontal_strategy: horizontal grid detection strategy. Same values as ``strategy``. Default ``"lines"``.
+      :arg List<Edge> vertical_lines: explicit vertical edges when the strategy is ``"explicit"``.
+      :arg List<Edge> horizontal_lines: explicit horizontal edges when the strategy is ``"explicit"``.
+      :arg List<Line> add_lines: additional ``Line`` objects considered during detection.
 
-      :arg float snap_tolerance: Any two horizontal lines whose y-values differ by no more than this value will be **snapped** into one. Accordingly for vertical lines. Default is 3. Separate values can be specified instead for the dimensions, using `snap_x_tolerance` and `snap_y_tolerance`.
+      :arg float snap_tolerance: Any two horizontal lines whose y-values differ by no more than this value will be **snapped** into one. Accordingly for vertical lines. Default is 3. Separate values can be specified instead for the dimensions, using ``snap_x_tolerance`` and ``snap_y_tolerance``.
 
-      :arg float join_tolerance: Any two lines will be **joined** to one if the end and the start points differ by no more than this value (in points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `join_x_tolerance` and `join_y_tolerance`.
+      :arg float join_tolerance: Any two lines will be **joined** to one if the end and the start points differ by no more than this value (in points). Default is 3. Instead of this value, separate values can be specified for the dimensions using ``join_x_tolerance`` and ``join_y_tolerance``.
 
       :arg float edge_min_length: Ignore a line if its length does not exceed this value (points). Default is 3.
 
-      :arg int min_words_vertical: relevant for vertical strategy option "text": at least this many words must coincide to establish a **virtual column** boundary.
+      :arg float min_words_vertical: relevant for vertical strategy option "text": at least this many words must coincide to establish a **virtual column** boundary.
 
-      :arg int min_words_horizontal: relevant for horizontal strategy option "text": at least this many words must coincide to establish a **virtual row** boundary.
+      :arg float min_words_horizontal: relevant for horizontal strategy option "text": at least this many words must coincide to establish a **virtual row** boundary.
 
-      :arg float intersection_tolerance: When combining lines into cell borders, orthogonal lines must be within this value (points) to be considered intersecting. Default is 3. Instead of this value, separate values can be specified for the dimensions using `intersection_x_tolerance` and `intersection_y_tolerance`.
+      :arg float intersection_tolerance: When combining lines into cell borders, orthogonal lines must be within this value (points) to be considered intersecting. Default is 3. Instead of this value, separate values can be specified for the dimensions using ``intersection_x_tolerance`` and ``intersection_y_tolerance``.
 
-      :arg float text_tolerance: Characters will be combined into words only if their distance is no larger than this value (points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `text_x_tolerance` and `text_y_tolerance`.
+      :arg float text_tolerance: Characters will be combined into words only if their distance is no larger than this value (points). Default is 3. Instead of this value, separate values can be specified for the dimensions using ``text_x_tolerance`` and ``text_y_tolerance``.
+
+      :arg bool use_layout: when ``true``, use the layout pipeline for table detection. Default ``true``.
+      :arg bool union: when ``true``, fuse layout tables with line-based tables.
+      :arg bool refine: when ``true``, attach span placements to detected tables.
 
       :rtype: List
-      :return: a list of `Table`
+      :return: a list of :class:`Table`
+
+      For the PascalCase settings object API, use :meth:`Page.FindTables` with :class:`TableSettings`.
    
-   .. method:: GetTextBlocks(Rect clip: null, int flags: 0, TextPage textPage: null, bool sort: false)
+   .. method:: GetTextBlocks(Rect clip: null, int flags: null, TextPage textpage: null, bool sort: false)
 
       Deprecated wrapper for :meth:`TextPage.ExtractBlocks`.  Use :meth:`Page.GetText` with the "blocks" option instead.
 
       :rtype: List
-      :return: a list of `TextBlock`
+      :return: a list of :class:`TextBlock`
 
-   .. method:: GetTextWords(Rect clip: null, int flags: 0, TextPage textPage: null, bool sort: false, char[] delimiters: null)
+   .. method:: GetTextWords(Rect clip: null, int flags: null, TextPage textpage: null, bool sort: false, string delimiters: null, float tolerance: 3)
 
       Deprecated wrapper for :meth:`TextPage.ExtractWords`. Use :meth:`Page.GetText` with the "words" option instead.
 
       :rtype: List
-      :return: a list of `WordBlock`
+      :return: a list of :class:`WordBlock`
 
    .. method:: GetTextWithLayout(Rect clip: null, int flags: 0, int tolerance: 5)
 
@@ -631,10 +685,10 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
    .. method:: GetTextTrace()
 
-      Return low-level text information of the page. The method is available for **all** document types. The result is a list of SpanInfo.
+      Return low-level text information of the page. The method is available for **all** document types. The result is a list of :class:`SpanInfo`.
 
       :rtype: List
-      :return: a list of `SpanInfo`
+      :return: a list of :class:`SpanInfo`
 
    .. method:: ReadContents()
 
@@ -646,8 +700,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       Run a page through a device.
 
-      :arg dev: Device, obtained from one of the :ref:`Device` constructors.
-      :type dev: :ref:`Device`
+      :arg dev: ``FzDevice`` used to interpret the page.
+      :type dev: ``FzDevice``
 
       :arg transform: Transformation to apply to the page. Set it to :ref:`Identity` if no transformation is desired.
       :type transform: :ref:`Matrix`
@@ -656,7 +710,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       Return a generator over the page's form fields.
 
-      :arg int[] types: a sequence of integers to down-select to one or more widget types. Default is all form fields. Example: `types=(PDF_WIDGET_TYPE_TEXT,)` will only return 'Text' fields.
+      :arg int[] types: a sequence of integers to down-select to one or more widget types. Default is all form fields. Example: ``types: new[] { Constants.PDF_WIDGET_TYPE_TEXT }`` will only return 'Text' fields. See :ref:`WidgetTypes`.
 
       :rtype: IEnumerable<Widget>
       :returns: a :ref:`Widget` for each iteration.
@@ -693,7 +747,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; InsertText
       pair: oc; InsertText
 
-   .. method:: InsertText( Point point, dynamic text, string fontName, string fontFile, float fontSize: 11, float lineHeight: 0, int setSimple: 0, int encoding: 0, float[] color = null, float[] fill = null, float borderWidth = 0.05f, int renderMode = 0, int rotate = 0, Morph morph = null, bool overlay = true, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: InsertText(Point point, string text, float fontSize: 11, string fontName: "helv", float[] color: null, float rotate: 0, int renderMode: 0, float borderWidth: 0.05f, float? lineHeight: null, string fontFile: null, int setSimple: 0, int encoding: 0, float[] fill: null, float? miterLimit: 1, Point morphFix: null, Matrix morphMat: null, Morph morph: null, bool overlay: true, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Insert text starting at :data:`Point` *point*. See :meth:`Shape.InsertText`.
 
@@ -716,7 +770,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; InsertTextbox
       pair: oc; InsertTextbox
 
-   .. method:: InsertTextbox(Rect rect, dynamic buffer, string fontName, string fontFile, float fontSize: 11, int idx: 0, float[] color: null, float[] fill: null, int renderMode: 0, float borderWidth: 0.05f, int encoding: TEXT_ENCODING_LATIN, int expandTabs: 1, int align: TEXT_ALIGN_LEFT, int rotate: 0, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0, bool overlay: true)
+   .. method:: InsertTextbox(Rect rect, string buffer, int align: 0, float borderWidth: 0.05f, float[] color: null, int encoding: 0, float expandTabs: 1, float fillOpacity: 1, float[] fill: null, string fontFile: null, string fontName: "helv", float fontSize: 11, float? lineHeight: null, float? miterLimit: 1, Point morphFix: null, Matrix morphMat: null, int oc: 0, bool overlay: true, int renderMode: 0, int rotate: 0, int setSimple: 0, float strokeOpacity: 1)
 
       PDF only: Insert text into the specified :data:`Rect` *rect*. See :meth:`Shape.InsertTextbox`.
 
@@ -773,12 +827,12 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :arg float opacity: set the fill and stroke opacity of the content. Only values `0 <= opacity < 1` are considered.
       :arg bool overlay: put the text in front of other content. Please refer to :meth:`Page.ShowPdfPage` for details.
 
-      :returns: A tuple of floats `(spare_height, scale)`.
+      :returns: A tuple of floats ``(spare_height, scale)``.
 
-         - `spare_height`: -1 if content did not fit, else >= 0. It is the height of the unused (still available) rectangle stripe. Positive only if scale = 1 (no down-scaling happened).
-         - `scale`: down-scaling factor, 0 < scale <= 1.
+         - ``spare_height``: -1 if content did not fit, else >= 0. It is the height of the unused (still available) rectangle stripe. Positive only if scale = 1 (no down-scaling happened).
+         - ``scale``: down-scaling factor, 0 < scale <= 1.
 
-         Please refer to examples in this section of the recipes: :ref:`RecipesText_I_c`.
+         Please refer to :ref:`The_Basics_Adding_Text`.
 
       
 
@@ -799,7 +853,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawLine
       pair: oc; DrawLine
 
-   .. method:: DrawLine(Point p1, Point p2, float[] color: 0, float[] fill: null, float width: 1, string dashes: null, float lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawLine(Point p1, Point p2, float[] color: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, bool overlay: true, Point morphOrigin: null, Matrix morphMatrix: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a line from *p1* to *p2* (:data:`Point` \s). See :meth:`Shape.DrawLine`.
 
@@ -819,7 +873,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawZigzag
       pair: oc; DrawZigzag
 
-   .. method:: DrawZigzag(Point p1, Point p2, float breadth: 2, float[] color: 0, float[] fill: null, int width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawZigzag(Point p1, Point p2, float breadth: 2, float[] color: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, bool overlay: true, Point morphOrigin: null, Matrix morphMatrix: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a zigzag line from *p1* to *p2* (:data:`Point` \s). See :meth:`Shape.DrawZigzag`.
 
@@ -839,7 +893,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawSquiggle
       pair: oc; DrawSquiggle
 
-   .. method:: DrawSquiggle(Point p1, Point p2, float breadth: 2, float[] color: 0, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawSquiggle(Point p1, Point p2, float breadth: 2, float[] color: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, bool overlay: true, Point morphOrigin: null, Matrix morphMatrix: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a squiggly (wavy, undulated) line from *p1* to *p2* (:data:`Point` \s). See :meth:`Shape.DrawSquiggle`.
 
@@ -858,7 +912,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawCircle
       pair: oc; DrawCircle
 
-   .. method:: DrawCircle(Point center, float radius, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawCircle(Point center, float radius, float[] color: null, float[] fill: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, bool overlay: true, Point morphOrigin: null, Matrix morphMatrix: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a circle around *center* (:data:`Point`) with a radius of *radius*. See :meth:`Shape.DrawCircle`.
 
@@ -877,7 +931,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawOval
       pair: oc; DrawOval
 
-   .. method:: DrawOval(Rect rect, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, float lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawOval(Rect rect, float[] color: null, float[] fill: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, bool overlay: true, Point morphOrigin: null, Matrix morphMatrix: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw an oval (ellipse) within the given :data:`Rect` or :data:`Quad`. See :meth:`Shape.DrawOval`.
 
@@ -898,7 +952,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawSector
       pair: oc; DrawSector
 
-   .. method:: DrawSector(Point center, Point point, int beta, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool fullSector: true, bool overlay: true, bool closePath: false, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawSector(Point center, Point point, float beta, float[] color: null, float[] fill: null, string dashes: null, bool fullSector: true, Point morphOrigin: null, Matrix morphMatrix: null, float width: 1, bool closePath: false, int lineCap: 0, int lineJoin: 0, bool overlay: true, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a circular sector, optionally connecting the arc to the circle's center (like a piece of pie). See :meth:`Shape.DrawSector`.
 
@@ -911,14 +965,15 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fill; DrawPolyline
       pair: lineCap; DrawPolyline
       pair: lineJoin; DrawPolyline
-      pair: morph; DrawPolyline
+      pair: morphOrigin; DrawPolyline
+      pair: morphMatrix; DrawPolyline
       pair: overlay; DrawPolyline
       pair: width; DrawPolyline
       pair: strokeOpacity; DrawPolyline
       pair: fillOpacity; DrawPolyline
       pair: oc; DrawPolyline
 
-   .. method:: DrawPolyline(Point[] points, float[] color=(0,), float[] fill=null, float width=1, string dashes=null, int lineCap=0, int lineJoin=0, bool overlay=true, bool closePath=false, Morph morph=null, float strokeOpacity=1, float fillOpacity=1, int oc=0)
+   .. method:: DrawPolyline(Point[] points, float[] color: null, float[] fill: null, string dashes: null, float width: 1, Point morphOrigin: null, Matrix morphMatrix: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, bool closePath: false, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw several connected lines defined by a sequence of :data:`Point` \s. See :meth:`Shape.DrawPolyline`.
 
@@ -941,7 +996,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: oc; DrawBezier
       pair: closePath; DrawCurve
 
-   .. method:: DrawBezier(Point p1, Point p2, Point p3, Point p4, float[] color: 0, float[] fill: 0, float width: 1, string dashes: null, float lineCap: 0, float lineJoin: 0, bool overlay: true, bool closePath: false, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawBezier(Point p1, Point p2, Point p3, Point p4, float[] color: null, float[] fill: null, string dashes: null, float width: 1, Point morphOrigin: null, Matrix morphMatrix: null, bool closePath: false, int lineCap: 0, int lineJoin: 0, bool overlay: true, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a cubic Bézier curve from *p1* to *p4* with the control points *p2* and *p3* (all are :data:`Point` \s). See :meth:`Shape.DrawBezier`.
 
@@ -962,9 +1017,9 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: oc; DrawCurve
       pair: closePath; DrawCurve
 
-   .. method:: DrawCurve(Point p1, Point p2, Point p3, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, bool closePath: false, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawCurve(Point p1, Point p2, Point p3, float[] color: null, float[] fill: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, bool overlay: true, Point morphOrigin: null, Matrix morphMatrix: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
-      PDF only: This is a special case of *DrawBezier()*. See :meth:`Shape.DrawCurve`.
+      PDF only: This is a special case of :meth:`Page.DrawBezier`. See :meth:`Shape.DrawCurve`.
 
 
    .. index::
@@ -983,7 +1038,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: radius; DrawRect
       pair: oc; DrawRect
 
-   .. method:: DrawRect(Rect rect, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, float radius: 0, int oc: 0)
+   .. method:: DrawRect(Rect rect, float[] color: null, float[] fill: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, Point morphOrigin: null, Matrix morphMatrix: null, bool overlay: true, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0, object radius: null)
 
       PDF only: Draw a rectangle. See :meth:`Shape.DrawRect`.
 
@@ -1002,7 +1057,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawQuad
       pair: oc; DrawQuad
 
-   .. method:: DrawQuad(Quad quad, float[] color: null, float[] fill: null, float width: 1, string dashes: null, float lineCap: 0, float lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawQuad(Quad quad, float[] color: null, float[] fill: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, Point morphOrigin: null, Matrix morphMatrix: null, bool overlay: true, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a quadrilateral. See :meth:`Shape.DrawQuad`.
 
@@ -1012,12 +1067,13 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fontFile; InsertFont
       pair: fontName; InsertFont
       pair: setSimple; InsertFont
+      pair: wmode; InsertFont
 
-   .. method:: InsertFont(string fontName, string fontFile, byte[] fontBuffer: null, bool setSimple: false, int encoding: TEXT_ENCODING_LATIN)
+   .. method:: InsertFont(string fontName: "helv", string fontFile: null, byte[] fontBuffer: null, bool setSimple: false, int wmode: 0, int encoding: 0)
 
-      PDF only: Add a new font to be used by text output methods and return its :data:`xref`. If not already present in the file, the font definition will be added. Supported are the built-in :data:`Base14_Fonts` and the CJK fonts via **"reserved"** fontnames. Fonts can also be provided as a file path or a memory area containing the image of a font file.
+      PDF only: Add a new font to be used by text output methods and return its :data:`xref`. If not already present in the file, the font definition will be added. Supported are the built-in :ref:`Base-14 fonts <inbuilt_fonts>` and the CJK fonts via **"reserved"** fontnames. Fonts can also be provided as a file path or a memory area containing the image of a font file.
 
-      :arg string fontName: The name by which this font shall be referenced when outputting text on this page. In general, you have a "free" choice here (but consult the :ref:`AdobeManual`, page 16, section 7.3.5 for a formal description of building legal PDF names). However, if it matches one of the :data:`Base14_Fonts` or one of the CJK fonts, *fontFile* and *fontBuffer* **are ignored**.
+      :arg string fontName: The name by which this font shall be referenced when outputting text on this page. In general, you have a "free" choice here (but consult the :ref:`AdobeManual`, page 16, section 7.3.5 for a formal description of building legal PDF names). However, if it matches one of the :ref:`Base-14 fonts <inbuilt_fonts>` or one of the CJK fonts, *fontFile* and *fontBuffer* **are ignored**.
 
         In other words, you cannot insert a font via *fontFile* / *fontBuffer* and also give it a reserved *fontName*.
 
@@ -1029,7 +1085,9 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :arg int setSimple: applicable for *fontFile* / *fontBuffer* cases only: enforce treatment as a "simple" font, i.e. one that only uses character codes up to 255.
 
-      :arg int encoding: applicable for the "Helvetica", "Courier" and "Times" sets of :data:`Base14_Fonts` only. Select one of the available encodings Latin (0), Cyrillic (2) or Greek (1). Only use the default (0 = Latin) for "Symbol" and "ZapfDingBats".
+      :arg int wmode: writing mode. 0 = horizontal (default), 1 = vertical.
+
+      :arg int encoding: applicable for the "Helvetica", "Courier" and "Times" sets of :ref:`Base-14 fonts <inbuilt_fonts>` only. Select one of the available encodings Latin (0, ``Constants.TextEncodingLatin``), Greek (1), or Cyrillic (2). Only use the default (0 = Latin) for "Symbol" and "ZapfDingBats".
 
       :rytpe: int
       :returns: the :data:`xref` of the installed font.
@@ -1047,45 +1105,44 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: oc; InsertImage
       pair: xref; InsertImage
 
-   .. method:: InsertImage(rect, *, alpha=-1, filename=None, height=0, keepProportion=true, mask=None, oc=0, overlay=true, pixmap=None, rotate=0, stream=None, width=0, xref=0)
+   .. method:: InsertImage(Rect rect, string filename: null, byte[] stream: null, Pixmap pixmap: null, byte[] mask: null, int rotate: 0, int xref: 0, int oc: 0, bool keepProportion: true, int alpha: -1, string overlay: "true")
 
       PDF only: Put an image inside the given rectangle. The image may already
       exist in the PDF or be taken from a pixmap, a file, or a memory area.
 
       :arg Rect rect: where to put the image. Must be finite and not empty.
-      :arg int alpha: deprecated and ignored.
-      :arg string fileName:
+      :arg string filename:
         name of an image file (all formats supported by MuPDF -- see
         :ref:`ImageFiles`).
-      :arg int height:
-      :arg bool keepProportion:
-        maintain the aspect ratio of the image.
+      :arg byte[] stream:
+        image in memory (all formats supported by MuPDF -- see :ref:`ImageFiles`).
+      :arg pixmap: a pixmap containing the image.
       :arg byte[] mask:
         image in memory -- to be used as image mask (alpha values) for the base
         image. When specified, the base image must be provided as a filename or
         a stream -- and must not be an image that already has a mask.
-      :arg int oc:
-        (:data:`xref`) make image visibility dependent on this :data:`OCG`
-        or :data:`OCMD`. Ignored after the first of multiple insertions. The
-        property is stored with the generated PDF image object and therefore
-        controls the image's visibility throughout the PDF.
-      :arg overlay: see :ref:`CommonParms`.
-      :arg pixmap: a pixmap containing the image.
       :arg int rotate: rotate the image.
         Must be an integer multiple of 90 degrees.
         Positive values rotate anti-clockwise.
         If you need a rotation by an arbitrary angle,
         consider converting the image to a PDF
-        (:meth:`Document.Convert2Pdf`)
+        (:meth:`Document.ConvertToPdf`)
         first and then use :meth:`Page.ShowPdfPage` instead.
-      :arg byte[] stream:
-        image in memory (all formats supported by MuPDF -- see :ref:`ImageFiles`).
-      :arg int width:
       :arg int xref:
         the :data:`xref` of an image already present in the PDF. If given,
         parameters `filename`, `pixmap`, `stream`, `alpha` and `mask` are
         ignored. The page will simply receive a reference to the existing
         image.
+      :arg int oc:
+        (:data:`xref`) make image visibility dependent on this :data:`OCG`
+        or :data:`OCMD`. Ignored after the first of multiple insertions. The
+        property is stored with the generated PDF image object and therefore
+        controls the image's visibility throughout the PDF.
+      :arg bool keepProportion:
+        maintain the aspect ratio of the image.
+      :arg int alpha: deprecated and ignored.
+      :arg string overlay: ``"true"`` draws in the page foreground; any other
+        value draws in the background. See :ref:`CommonParams`.
 
       :type pixmap: :ref:`Pixmap`
       
@@ -1113,23 +1170,22 @@ In a nutshell, this is what you can do with MuPDF.NET:
          4.
            The image may be inserted uncompressed, e.g. if a `Pixmap` is used
            or if the image has an alpha channel. Therefore, consider using
-           `deflate=true` when saving the file. In addition, there are ways to
+           ``deflate: true`` when saving the file. In addition, there are ways to
            control the image size -- even if transparency comes into play. Have
-           a look at :ref:`RecipesImages_O`.
+           a look at :ref:`The_Basics_Images`.
 
          5.
            The image is stored in the PDF at its original quality level. This
            may be much better than what you need for your display. Consider
            **decreasing the image size** before insertion -- e.g. by using
            the pixmap option and then shrinking it or scaling it down (see
-           :ref:`Pixmap` chapter). The PIL method `Image.thumbnail()` can
-           also be used for that purpose. The file size savings can be very
+           :ref:`Pixmap` chapter). The file size savings can be very
            significant.
 
          6.
            Another efficient way to display the same image on multiple
            pages is another method: :meth:`ShowPdfPage`. Consult
-           :meth:`Document.Convert2Pdf` for how to obtain intermediary PDFs
+           :meth:`Document.ConvertToPdf` for how to obtain intermediary PDFs
            usable for that method.
 
    
@@ -1199,24 +1255,24 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       Retrieves the content of a page in a variety of formats. This is a wrapper for multiple :ref:`TextPage` methods by choosing the output option `opt` as follows:
 
-      * "text" -- :meth:`TextPage.extractTEXT`, default
-      * "blocks" -- :meth:`TextPage.extractBLOCKS`
-      * "words" -- :meth:`TextPage.extractWORDS`
-      * "html" -- :meth:`TextPage.extractHTML`
-      * "xhtml" -- :meth:`TextPage.extractXHTML`
-      * "xml" -- :meth:`TextPage.extractXML`
-      * "dict" -- :meth:`TextPage.extractDICT`
-      * "json" -- :meth:`TextPage.extractJSON`
-      * "rawdict" -- :meth:`TextPage.extractRAWDICT`
-      * "rawjson" -- :meth:`TextPage.extractRAWJSON`
+      * "text" -- :meth:`TextPage.ExtractText`, default
+      * "blocks" -- :meth:`TextPage.ExtractBlocks`
+      * "words" -- :meth:`TextPage.ExtractWords`
+      * "html" -- :meth:`TextPage.ExtractHtml`
+      * "xhtml" -- :meth:`TextPage.ExtractXHtml`
+      * "xml" -- :meth:`TextPage.ExtractXML`
+      * "dict" -- :meth:`TextPage.ExtractDict`
+      * "json" -- :meth:`TextPage.ExtractJSON`
+      * "rawdict" -- :meth:`TextPage.ExtractRAWDict`
+      * "rawjson" -- :meth:`TextPage.ExtractRawJSON`
 
       :arg str opt: A string indicating the requested format, one of the above. A mixture of upper and lower case is supported.
 
         Values "words" and "blocks" are also accepted.
 
-      :arg Rect clip: restrict extracted text to this rectangle. If None, the full page is taken. Has **no effect** for options "html", "xhtml" and "xml".
+      :arg Rect clip: restrict extracted text to this rectangle. If ``null``, the full page is taken. Has **no effect** for options "html", "xhtml" and "xml".
 
-      :arg int flags: indicator bits to control whether to include images or how text should be handled with respect to white spaces and :data:`ligatures`. See :ref:`TextPreserve` for available indicators and :ref:`text_extraction_flags` for default settings. 
+      :arg int flags: indicator bits to control whether to include images or how text should be handled with respect to white spaces and :data:`ligatures`. See :ref:`TextPreserve` for available indicators. 
 
       :arg TextPage textpage: use a previously created :ref:`TextPage`. This reduces execution time **very significantly:** by more than 50% and up to 95%, depending on the extraction option. If specified, the 'flags' and 'clip' arguments are ignored, because they are textpage-only properties. If omitted, a new, temporary textpage will be created. 
 
@@ -1243,10 +1299,10 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :arg Rect rect: Rect.
       :arg textpage: a :ref:`TextPage` to use. If omitted, a new, temporary textpage will be created.
 
-      :returns: a string with interspersed linebreaks where necessary. It is based on dedicated code. A tyical use is checking the result of :meth:`Page.SearchFor`:
+      :returns: a string with interspersed linebreaks where necessary. It is based on dedicated code. A typical use is checking the result of :meth:`Page.SearchFor`:
 
-        List<Rect> rl = page.SearchFor("currency:");
-        page.GetTextbox(rl[0]);
+        List<Quad> rl = page.SearchFor("currency:");
+        page.GetTextbox(rl[0].Rect);
 
 
    .. index::
@@ -1318,7 +1374,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       Width          Stroke line width. (see :ref:`Shape`).
       ============== ============================================================================
 
-      Key `"opacity"` has been replaced by the new keys `"fillOpacity"` and `"strokeOpacity"`. This is now compatible with the corresponding parameters of :meth:`Shape.finish`.
+      Key `"opacity"` has been replaced by the new keys `"fillOpacity"` and `"strokeOpacity"`. This is now compatible with the corresponding parameters of :meth:`Shape.Finish`.
 
 
       For paths other than groups or clips, key `"type"` takes one of the following values:
@@ -1390,7 +1446,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
         type           "group"
         ============== ============================================================================
 
-      .. note:: The method is based on the output of :meth:`Page.GetCDrawings` -- which is much faster, but requires somewhat more attention processing its output.
+      .. note:: The method is based on the output of :meth:`Page.GetDrawings` -- which is much faster, but requires somewhat more attention processing its output.
 
    .. method:: GetFonts(bool full: false)
 
@@ -1414,8 +1470,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :arg bool xrefs: **PDF only.** Try to find the :data:`xref` for each image. Implies `hashes=true`. Adds the `"xref"` key to the dictionary. If not found, the value is 0, which means, the image is either "inline" or otherwise undetectable. Please note that this option has an extended response time, because the MD5 hashcode will be computed at least two times for each image with an xref.
 
-      :rtype: list of ImageInfo
-      :returns: A list of ImageInfo. This includes information for **exactly those** images, that are shown on the page -- including *"inline images"*. In contrast to images included in :meth:`Page.GetText`, image **binary content** is not loaded, which drastically reduces memory usage. The dictionary layout is similar to that of image blocks in `page.GetText("dict")`.
+      :rtype: list of :class:`ImageInfo`
+      :returns: A list of :class:`ImageInfo`. This includes information for **exactly those** images, that are shown on the page -- including *"inline images"*. In contrast to images included in :meth:`Page.GetText`, image **binary content** is not loaded, which drastically reduces memory usage. The dictionary layout is similar to that of image blocks in :meth:`Page.GetText` with option ``"dict"``.
 
          =============== ===============================================================
          **Key**             **Value**
@@ -1440,7 +1496,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
    .. method:: GetXObjects()
 
-      PDF only: Return a list of Form XObjects referenced by the page. Wrapper for :meth:`Document.GetPageXObjects`.
+      PDF only: Return a list of Form XObjects referenced by the page. Wrapper for :meth:`Document.GetPageXobjects` / :meth:`GetPageXObjects <Document.GetPageXobjects>`.
 
 
    .. index::
@@ -1478,7 +1534,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       .. note::
 
          1. Be aware that :meth:`Page.GetImages` may contain "dead" entries i.e. images, which the page **does not display**. This is no error, but intended by the PDF creator. No exception will be raised in this case, but an infinite rectangle is returned. You can avoid this from happening by executing :meth:`Page.CleanContents` before this method.
-         2. The image's "transformation matrix" is defined as the matrix, for which the expression `bbox / transform == Rect(0, 0, 1, 1)` is true, lookup details here: :ref:`ImageTransformation`.
+         2. The image's "transformation matrix" is defined as the matrix, for which the expression `bbox / transform == Rect(0, 0, 1, 1)` is true.
 
 
    .. index::
@@ -1536,7 +1592,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
    .. method:: GetAnnotXrefs()
 
-      PDF only: return a list of the :data`xref` numbers of annotations, widgets and links -- technically of all entries found in the page's */Annots*  array.
+      PDF only: return a list of the :data:`xref` numbers of annotations, widgets and links -- technically of all entries found in the page's */Annots*  array.
 
       :rtype: list of AnnotXref
       :returns: a list of items *(xref, type)* where type is the annotation type. Use the type to tell apart links, fields and annotations, see :ref:`AnnotationTypes`.
@@ -1628,7 +1684,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
          // lower half page
          Rect r2 = r1 + new Rect(0, page.rect.height/2, 0, page.rect.height/2)
 
-         Document src = new Document("MuPDF.pdf")  // show page 0 of this
+         Document src = Document.Open("MuPDF.pdf");  // show page 0 of this
 
          page.ShowPdfPage(r1, src, 0, rotate=90)
          page.ShowPdfPage(r2, src, 0, rotate=-90)
@@ -1694,33 +1750,40 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
    .. index::
       pair: flags; SearchFor
-      pair: quads; SearchFor
+      pair: maxHits; SearchFor
       pair: clip; SearchFor
       pair: textpage; SearchFor
 
-   .. method:: SearchFor(string needle, Rect clip: null, bool quads: false, int flags: TEXT_DEHYPHENATE | TEXT_PRESERVE_WHITESPACE | TEXT_PRESERVE_LIGATURES | TEXT_MEDIABOX_CLIP, TextPage textpage: None)
+   .. method:: SearchFor(string needle, Quad clip: null, int maxHits: 16, int flags: 0, TextPage textpage: null)
 
-      Search for *needle* on a page. Wrapper for :meth:`TextPage.Search`.
+      Search for *needle* on a page. Wrapper for :meth:`TextPage.Search`. Returns :ref:`Quad` hits. Use ``Page.SearchForRects`` for :ref:`Rect` hits.
 
       :arg string needle: Text to search for. May contain spaces. Upper / lower case is ignored, but only works for ASCII characters: For example, "COMPÉTENCES" will not be found if needle is "compétences" -- "compÉtences" however will. Similar is true for German umlauts and the like.
-      :arg Rect clip: only search within this area.
-      :arg bool quads: Return object type :ref:`Quad` instead of :ref:`Rect`.
-      :arg int flags: Control the data extracted by the underlying :ref:`TextPage`. By default, ligatures and white spaces are kept, and hyphenation [#f8]_ is detected.
-      :arg textpage: use a previously created :ref:`TextPage`. This reduces execution time **significantly.** If specified, the 'flags' and 'clip' arguments are ignored. If omitted, a temporary textpage will be created.
+      :arg Quad clip: only search within this area.
+      :arg int maxHits: maximum number of hits to return. Default 16.
+      :arg int flags: Control the data extracted by the underlying :ref:`TextPage`. Default 0.
+      :arg TextPage textpage: use a previously created :ref:`TextPage`. This reduces execution time **significantly.** If specified, the 'flags' and 'clip' arguments are ignored. If omitted, a temporary textpage will be created.
 
-      :rtype: list
+      :rtype: List<Quad>
 
       :returns:
 
-        A list of :ref:`Rect` or  :ref:`Quad` objects, each of which  -- **normally!** -- surrounds one occurrence of *needle*. **However:** if parts of *needle* occur on more than one line, then a separate item is generated for each these parts. So, if `needle = "search string"`, two rectangles may be generated.
+        A list of :ref:`Quad` objects, each of which  -- **normally!** -- surrounds one occurrence of *needle*. **However:** if parts of *needle* occur on more than one line, then a separate item is generated for each these parts. So, if `needle = "search string"`, two quads may be generated.
 
 
       .. note:: The method supports multi-line text marker annotations: you can use the full returned list as **one single** parameter for creating the annotation.
 
       .. caution::
 
-         * There is a tricky aspect: the search logic regards **contiguous multiple occurrences** of *needle* as one: assuming *needle* is "abc", and the page contains "abc" and "abcabc", then only **two** rectangles will be returned, one for "abc", and a second one for "abcabc".
-         * You can always use :meth:`Page.GetTextbox` to check what text actually is being surrounded by each rectangle.
+         * There is a tricky aspect: the search logic regards **contiguous multiple occurrences** of *needle* as one: assuming *needle* is "abc", and the page contains "abc" and "abcabc", then only **two** quads will be returned, one for "abc", and a second one for "abcabc".
+         * You can always use :meth:`Page.GetTextbox` to check what text actually is being surrounded by each hit.
+
+
+   .. method:: SearchForRects(string needle, Quad clip: null, int maxHits: 16, int flags: 0, TextPage textpage: null)
+
+      Same search as :meth:`Page.SearchFor`, returning :ref:`Rect` hits.
+
+      :rtype: List<Rect>
 
 
    .. method:: SetMediaBox(r)
@@ -1738,9 +1801,9 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       PDF only: change the visible part of the page.
 
-      :arg Rect r: the new visible area of the page. Note that this **must** be specified in **unrotated coordinates**, not empty, nor infinite and be completely contained in the :attr:`Page.mediabox`.
+      :arg Rect r: the new visible area of the page. Note that this **must** be specified in **unrotated coordinates**, not empty, nor infinite and be completely contained in the :attr:`Page.MediaBox`.
 
-      After execution **(if the page is not rotated)**, :attr:`Page.rect` will equal this rectangle, but be shifted to the top-left position (0, 0) if necessary.
+      After execution **(if the page is not rotated)**, :attr:`Page.Rect` will equal this rectangle, but be shifted to the top-left position (0, 0) if necessary.
 
       
    .. method:: SetArtBox(Rect r)
@@ -1783,7 +1846,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       The page's `/CropBox` for a PDF. Always the **unrotated** page rectangle is returned. For a non-PDF this will always equal the page rectangle.
 
-      .. note:: In PDF, the relationship between `/MediaBox`, `/CropBox` and page rectangle may sometimes be confusing, please do lookup the glossary for :data:`MediaBox`.
+      .. note:: In PDF, the relationship between `/MediaBox`, `/CropBox` and page rectangle may sometimes be confusing, please do lookup :attr:`Page.MediaBox`.
 
       :type: :ref:`Rect`
 
@@ -1809,7 +1872,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :type: :ref:`Rect`
 
-      .. note:: For most PDF documents and for **all other document types**, `page.Rect == page.CropBox == page.MediaBox` is true. However, for some PDFs the visible page is a true subset of :data:`mediabox`. Also, if the page is rotated, its `Page.rect` may not equal `Page.CropBox`. In these cases the above attributes help to correctly locate page elements.
+      .. note:: For most PDF documents and for **all other document types**, :attr:`Page.Rect`, :attr:`Page.CropBox` and :attr:`Page.MediaBox` are equal. However, for some PDFs the visible page is a true subset of :data:`mediabox`. Also, if the page is rotated, :attr:`Page.Rect` may not equal :attr:`Page.CropBox`. In these cases the above attributes help to correctly locate page elements.
 
    .. attribute:: TransformationMatrix
 
@@ -1875,6 +1938,12 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :type: int
    
+   .. attribute:: TableSettings
+
+      Default :class:`TableSettings` used by :meth:`Page.FindTables` when *settings* is ``null``.
+
+      :type: :class:`TableSettings`
+
    .. attribute:: IsWrapped
 
       Check whether contents wrapping is present
@@ -1931,12 +2000,12 @@ Indirect *LINK_GOTOR* destinations can in general of course not be checked for v
 
 3. Create a dictionary `d = {"kind": LINK_GOTO, "page": pno, "from": bbox, "to": point}`.
 
-4. Execute `page.InsertLink(d)`.
+4. Execute :meth:`Page.InsertLink`.
 
 
-Homologous Methods of :ref:`Document` and :ref:`Page`
+Homologous Methods of Document and Page
 --------------------------------------------------------
-This is an overview of homologous methods on the :ref:`Document` and on the :ref:`Page` level.
+This is an overview of homologous methods on the :class:`Document` and on the :class:`Page` level.
 
 ========================================= =======================
 **Document Level**                        **Page Level**
@@ -1970,6 +2039,8 @@ Rect            boundary box, :ref:`Rect`
 Matrix          respective transformation matricx, :ref:`Matrix`
 =============== ================================================
 
+.. _BoxLog:
+
 BoxLog Structure
 ~~~~~~~~~~~~~~~~
 
@@ -1981,8 +2052,8 @@ Box             rectangle coordinates, :ref:`Rect`
 LayerName       optional. layer name, *string*
 =============== ===================================
 
-LinkInfo Structure
-~~~~~~~~~~~~~~~~~~
+:class:`LinkInfo` Structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ========= ====================================================================================================
 **Key**         **Value**

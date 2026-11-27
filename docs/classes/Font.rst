@@ -30,7 +30,7 @@ A Font object also contains useful general information, like the font bbox, the 
 :attr:`Font.Flags`                       Collection of font properties
 :attr:`Font.GlyphCount`                  Number of supported glyphs
 :attr:`Font.Name`                        Name of font
-:attr:`Font.IsWriteable`                 Font usable with :ref:`TextWriter`
+:attr:`Font.IsWritable`                  Font usable with :ref:`TextWriter`
 ======================================== ============================================
 
 
@@ -110,7 +110,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       Check whether the unicode *chr* exists in the font or (option) some fallback font. May be used to check whether any "TOFU" symbols will appear on output.
 
-      :arg int chr: the unicode of the character (i.e. *ord()*).
+      :arg int chr: the unicode of the character (i.e. ``(int)'Ä'``).
       :arg string language: the language -- currently unused.
       :arg int script: the UCDN script number.
       :arg bool fallback: Perform an extended search in fallback fonts or restrict to current font (default).
@@ -120,14 +120,14 @@ A Font object also contains useful general information, like the font bbox, the 
 
       Return an array of unicodes supported by this font.
 
-      :returns: an *array.array* [#f2]_ of length at most :attr:`Font.GlyphCount`. I.e. *chr()* of every item in this array has a glyph in the font without using fallbacks. This is an example display of the supported glyphs:
+      :returns: a ``List<int>`` of length at most :attr:`Font.GlyphCount`. I.e. ``Convert.ToChar`` of every item in this list has a glyph in the font without using fallbacks. This is an example display of the supported glyphs:
 
       .. code-block:: cs
 
-         Font font =  new Font("math")
-         List<int> vuc = font.GetValidCodePoints()
-         foreach(int i in vuc)
-            print($"%04X %s (%s)" % (i, chr(i), font.Unicode2GlyphName(i)))
+         Font font =  new Font("math");
+         List<int> vuc = font.GetValidCodePoints();
+         foreach (int i in vuc)
+            Console.WriteLine($"{i:X4} {Convert.ToChar(i)} ({font.Unicode2GlyphName(i)})");
          0000
          000D   (CR)
          0020   (space)
@@ -162,7 +162,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       Calculate the "width" of the character's glyph (visual representation).
 
-      :arg int chr: the unicode number of the character. Use *ord()*, not the character itself. Again, this should normally work even if a character is not supported by that font, because fallback fonts will be checked where necessary.
+      :arg int chr: the unicode number of the character. Use ``(int)'Ä'``, not the character itself. Again, this should normally work even if a character is not supported by that font, because fallback fonts will be checked where necessary.
       :arg int wmode: write mode, 0 = horizontal, 1 = vertical.
 
       The other parameters are not in use currently.
@@ -171,7 +171,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
    .. method:: GlyphName2Unicode(string name)
 
-      Return the unicode value for a given glyph name. Use it in conjunction with `chr()` if you want to output e.g. a certain symbol.
+      Return the unicode value for a given glyph name. Use it in conjunction with ``Convert.ToChar`` if you want to output e.g. a certain symbol.
 
       :arg string name: The name of the glyph.
 
@@ -233,18 +233,19 @@ A Font object also contains useful general information, like the font bbox, the 
 
       :arg string text: a text string, UTF-8 encoded.
 
-      :arg float fontSize: the :data:`FontSize`.
+      :arg float fontSize: the :data:`FontSize` in points.
 
       :rtype: List<float>
 
-      :returns: the lengths in points of the characters of a string when stored in the PDF. It works like :meth:`Font.TextLength` broken down to single characters. This is a high speed method, used e.g. in :meth:`TextWriter.FillTextbox`. The following is true (allowing rounding errors): `font.TextLength(text) == sum(font.GetCharLengths(text))`.
+      :returns: the lengths in points of the characters of a string when stored in the PDF. It works like :meth:`Font.TextLength` broken down to single characters. This is a high speed method, used e.g. in :meth:`TextWriter.FillTextbox`. The following is true (allowing rounding errors): ``font.TextLength(text) == font.GetCharLengths(text).Sum()``.
+
+      .. code-block:: cs
 
          Font font = new Font("helv", "../helv.ttf");
          string text = "MuPDF.NET";
-         font.TextLength(text);
-         Utils.GetTextLength(text, fontName="helv");
-         Math.Sum(font.GetCharLengths(text));
-         Console.WriteLine(font.GetCharLengths(text));
+         Console.WriteLine(font.TextLength(text));
+         Console.WriteLine(Utils.GetTextLength(text, fontName: "helv"));
+         Console.WriteLine(font.GetCharLengths(text).Sum());
 
    .. attribute:: Buffer
 
@@ -288,7 +289,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       :rtype: float
 
-   .. attribute:: IsWriteable
+   .. attribute:: IsWritable
 
       Indicates whether this font can be used with :ref:`TextWriter`.
 

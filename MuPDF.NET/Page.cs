@@ -3469,9 +3469,9 @@ namespace MuPDF.NET
         /// <summary>
         /// PDF only: Add a new font to be used by text output methods and return its xref. If not already present in the file, the font definition will be added. Supported are the built-in Base14_Fonts and the CJK fonts via "reserved" fontnames. Fonts can also be provided as a file path or a memory area containing the image of a font file.
         /// </summary>
-        public int InsertFont(string fontName = "helv", string fontFile = null, byte[] fontbuffer = null,
+        public int InsertFont(string fontName = "helv", string fontFile = null, byte[] fontBuffer = null,
             bool setSimple = false, int wmode = 0, int encoding = 0)
-            => insert_font(fontName, fontFile, fontbuffer, setSimple, wmode, encoding);
+            => insert_font(fontName, fontFile, fontBuffer, setSimple, wmode, encoding);
 
 
         internal int insert_font(string fontname = "helv", string fontfile = null, byte[] fontbuffer = null,

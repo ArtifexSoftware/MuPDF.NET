@@ -58,6 +58,18 @@ Constants
 
     :type: Tuple
 
+.. py:data:: Xref
+
+    PDF object number (cross-reference). Same as :data:`xref`.
+
+    :type: int
+
+.. py:data:: FontSize
+
+    Font size in points.
+
+    :type: float
+
 .. _PermissionCodes:
 
 Document Permissions
@@ -88,6 +100,14 @@ PDF_OC_ON              Set an OCG to ON temporarily
 PDF_OC_TOGGLE          Toggle OCG status temporarily
 PDF_OC_OFF             Set an OCG to OFF temporarily
 ====================== =======================================================================
+
+.. py:data:: OCG
+
+    Optional Content Group. See :meth:`Document.AddOcg`.
+
+.. py:data:: OCMD
+
+    Optional Content Membership Dictionary. See :meth:`Document.SetOcmd`.
 
 .. _EncryptionMethods:
 
@@ -120,7 +140,7 @@ pfa  Postscript for ASCII font (various subtypes)
 cff  Type1C font (compressed font equivalent to Type1)
 cid  character identifier font (postscript format)
 otf  OpenType font
-n/a  not extractable, e.g. :ref:`Base-14-Fonts`, Type 3 fonts and others
+n/a  not extractable, e.g. :ref:`Base-14 fonts <inbuilt_fonts>`, Type 3 fonts and others
 ==== ============================================================================
 
 
@@ -234,7 +254,7 @@ For the MuPDF.NET programmer, some combination (using C# 's `|` operator, or sim
 
 .. py:data:: TEXT_CID_FOR_UNKNOWN_UNICODE
 
-    128 -- If set, use raw character codes instead of U+FFFD. This is the default for **text extraction** in MuPDF.NET. If you **want to detect** when encoding information is missing or uncertain, toggle this flag and scan for the presence of U+FFFD (= `chr(0xfffd)`) code points in the resulting text.
+    128 -- If set, use raw character codes instead of U+FFFD. This is the default for **text extraction** in MuPDF.NET. If you **want to detect** when encoding information is missing or uncertain, toggle this flag and scan for the presence of U+FFFD (``(char)0xfffd``) code points in the resulting text.
 
 
 The following constants represent the default combinations of the above for text extraction and searching:
@@ -276,11 +296,12 @@ The following constants represent the default combinations of the above for text
     `TEXT_PRESERVE_LIGATURES | TEXT_PRESERVE_WHITESPACE | TEXT_MEDIABOX_CLIP | TEXT_DEHYPHENATE`
 
 
+.. _LinkDest:
 .. _linkDest Kinds:
 
 Link Destination Kinds
 -----------------------
-Possible values of :attr:`linkDest.kind` (link destination kind).
+Possible values of ``LinkDest.Kind`` (link destination kind).
 
 .. py:data:: LINK_NONE
 
@@ -520,24 +541,26 @@ Field flags (*field_flags*)
 PDF Standard Blend Modes
 ----------------------------
 
-For an explanation see :ref:`AdobeManual`, page 324::
+For an explanation see :ref:`AdobeManual`, page 324.
 
-    PDF_BM_Color "Color"
-    PDF_BM_ColorBurn "ColorBurn"
-    PDF_BM_ColorDodge "ColorDodge"
-    PDF_BM_Darken "Darken"
-    PDF_BM_Difference "Difference"
-    PDF_BM_Exclusion "Exclusion"
-    PDF_BM_HardLight "HardLight"
-    PDF_BM_Hue "Hue"
-    PDF_BM_Lighten "Lighten"
-    PDF_BM_Luminosity "Luminosity"
-    PDF_BM_Multiply "Multiply"
-    PDF_BM_Normal "Normal"
-    PDF_BM_Overlay "Overlay"
-    PDF_BM_Saturation "Saturation"
-    PDF_BM_Screen "Screen"
-    PDF_BM_SoftLight "Softlight"
+.. py:data:: PDF_BM_Color
+             PDF_BM_ColorBurn
+             PDF_BM_ColorDodge
+             PDF_BM_Darken
+             PDF_BM_Difference
+             PDF_BM_Exclusion
+             PDF_BM_HardLight
+             PDF_BM_Hue
+             PDF_BM_Lighten
+             PDF_BM_Luminosity
+             PDF_BM_Multiply
+             PDF_BM_Normal
+             PDF_BM_Overlay
+             PDF_BM_Saturation
+             PDF_BM_Screen
+             PDF_BM_SoftLight
+
+    Standard PDF blend mode names. ``PDF_BM_Normal`` is ``"Normal"`` and removes a blend mode.
 
 
 .. _StampIcons:

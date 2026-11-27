@@ -98,7 +98,15 @@
         </div>
 
         <div class="forumLink" style="display:flex;align-items:baseline;margin-top: -5px;margin-left:10px;">
-            <div id="forumCTAText"></div><a id="winking-cow-link" style="font-weight: bold;" href="https://forum.mupdf.com">Try our forum! <img alt="MuPDF Forum link logo" id="winking-cow-image" src="https://pymupdf.readthedocs.io/en/latest/_static/forum-logo.gif" width=38px height=auto /></a>
+            <div id="forumCTAText"></div><a id="winking-cow-link" style="font-weight: bold;" href="https://forum.mupdf.com">Try our forum! <img alt="MuPDF Forum link logo" id="winking-cow-image" width=38px height=auto /></a>
+            <script>
+            (function () {
+                var img = document.getElementById("winking-cow-image");
+                if (!img) return;
+                var root = document.documentElement.getAttribute("data-content_root") || "./";
+                img.src = root + "_static/forum-logo.gif";
+            })();
+            </script>
         </div>
 
     </div>

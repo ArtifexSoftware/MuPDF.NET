@@ -14,6 +14,7 @@ This class represents a document. It can be constructed from a file or from memo
 =============================================== ==========================================================
 **Method / Attribute**                          **Short Description**
 =============================================== ==========================================================
+:meth:`Document.Open`                           Open a document (preferred)
 :meth:`Document.AddLayer`                       PDF only: make new optional content configuration
 :meth:`Document.AddOcg`                         PDF only: add new optional content group
 :meth:`Document.ApplyCss`                       Markdown only: apply CSS stylesheet to Markdown content
@@ -22,30 +23,30 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.CanSaveIncrementally`           Check if incremental save is possible
 :meth:`Document.GetChapterPageCount`            Number of pages in chapter
 :meth:`Document.Close`                          Close the document
-:meth:`Document.Convert2Pdf`                    Write a PDF version to memory
+:meth:`Document.ConvertToPdf`                   Write a PDF version to memory (also Convert2Pdf)
 :meth:`Document.CopyPage`                       PDF only: copy a page reference
 :meth:`Document.DeleteTocItem`                  PDF only: remove a single TOC item
 :meth:`Document.DeletePage`                     PDF only: delete a page
 :meth:`Document.DeletePages`                    PDF only: delete multiple pages
-:meth:`Document.AddEmbfile`                     PDF only: add a new embedded file from buffer
+:meth:`Document.AddEmbeddedFile`                PDF only: add a new embedded file (also AddEmbfile)
 :meth:`Document.GetEmbfileCount`                PDF only: get an embedded file from buffer
 :meth:`Document.DeleteEmbfile`                  PDF only: delete an embedded file entry
 :meth:`Document.GetEmbfile`                     PDF only: extract an embedded file buffer
 :meth:`Document.GetEmbfileInfo`                 PDF only: metadata of an embedded file
 :meth:`Document.GetEmbfileNames`                PDF only: list of embedded files
-:meth:`Document.GetEmbfileUpd`                  PDF only: change an embedded file
+:meth:`Document.UpdateEmbeddedFile`             PDF only: change an embedded file (also GetEmbfileUpd)
 :meth:`Document.GetNewXref`                     Make new `xref`
 :meth:`Document.GetXrefLength`                  Get length of `xref` table
 :meth:`Document.GetCharWidths`                  PDF only: return a list of glyph widths of a font
 :meth:`Document.ExtractFont`                    PDF only: extract a font by `xref`
 :meth:`Document.ExtractImage`                   PDF only: extract an embedded image by `xref`       
 :meth:`Document.FindBookmark`                   Retrieve page location after laid out document
-:meth:`Document.CopyFullPage`                   PDF only: duplicate a page
+:meth:`Document.FullCopyPage`                   PDF only: duplicate a page (also CopyFullPage)
 :meth:`Document.GetLayer`                       PDF only: lists of OCGs in ON, OFF, RBGroups
 :meth:`Document.GetLayers`                      PDF only: list of optional content configurations
-:meth:`Document.GetOC`                          PDF only: get OCG / OCMD `xref` of image / form xobject
+:meth:`Document.GetOc`                          PDF only: get OCG / OCMD xref (also GetOC)
 :meth:`Document.GetOcgs`                        PDF only: info on all optional content groups
-:meth:`Document.GetOCMD`                        PDF only: retrieve definition of an `OCMD`
+:meth:`Document.GetOcmd`                        PDF only: retrieve definition of an OCMD (also GetOCMD)
 :meth:`Document.GetOutlineXrefs`                Get list of outline xref numbers
 :meth:`Document.GetPageFonts`                   PDF only: list of fonts referenced by a page
 :meth:`Document.GetPageImages`                  PDF only: list of images referenced by a page
@@ -53,7 +54,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetPageNumbers`                 PDF only: get page numbers having a given label
 :meth:`Document.GetPagePixmap`                  Create a pixmap of a page by page number
 :meth:`Document.GetPageText`                    Extract the text of a page by page number
-:meth:`Document.GetPageXObjects`                PDF only: list of XObjects referenced by a page
+:meth:`Document.GetPageXobjects`                PDF only: list of page XObjects (also GetPageXObjects)
 :meth:`Document.GetSigFlags`                    PDF only: determine signature state
 :meth:`Document.GetToc`                         Extract the table of contents
 :meth:`Document.GetKeyValues`                   PDF only: extract form field names and values
@@ -81,13 +82,14 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.LoadPage`                       Load a page
 :meth:`Document.MakeBookmark`                   Create a page pointer in reflowable documents
 :meth:`Document.MovePage`                       PDF only: move a page to different location in doc
-:meth:`Document.NeedAppearances`                PDF only: get/set /NeedAppearances property
+:attr:`Document.NeedAppearances`                PDF only: /NeedAppearances value
+:meth:`Document.SetNeedAppearances`             PDF only: set /NeedAppearances
 :meth:`Document.NewPage`                        PDF only: insert a new empty page
 :meth:`Document.NextLocation`                   Return (chapter, pno) of following page
 :meth:`Document.PageCropBox`                    PDF only: the unrotated page rectangle
 :meth:`Document.PageXref`                       PDF only: `xref` of a page number
-:meth:`Document.GetPages`                       Iterator over a page range
-:meth:`Document.GetPdfCatelog`                  PDF only: `xref` of catalog (root)
+:meth:`Document.Pages`                          Iterator over a page range (also GetPages)
+:meth:`Document.GetPdfCatalog`                  PDF only: xref of catalog (also GetPdfCatelog)
 :meth:`Document.GetPdfTrailer`                  PDF only: trailer source
 :meth:`Document.PrevLocation`                   Return (chapter, pno) of preceding page
 :meth:`Document.GetLocationFromPageNumber`      Convert pno to (chapter, page)
@@ -111,8 +113,8 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.SetLayer`                        PDF only: mass changing OCG states
 :meth:`Document.SetMarkInfo`                    PDF only: set the MarkInfo values
 :meth:`Document.SetMetadata`                    PDF only: set the metadata
-:meth:`Document.SetOC`                          PDF only: attach OCG/OCMD to image / form xobject
-:meth:`Document.SetOCMD`                        PDF only: create or update an `OCMD`
+:meth:`Document.SetOc`                          PDF only: attach OCG/OCMD (also SetOC)
+:meth:`Document.SetOcmd`                        PDF only: create or update an OCMD (also SetOCMD)
 :meth:`Document.SetPageLabels`                  PDF only: add/update page label definitions
 :meth:`Document.SetPageMode`                    PDF only: set the PageMode
 :meth:`Document.SetPageLayout`                  PDF only: set the PageLayout
@@ -127,7 +129,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.ToText`                         Convert document to plain text (layout mode)
 :meth:`Document.Write`                          Write document
 :meth:`Document.CopyXref`                       PDF only: copy a PDF dictionary to another `xref`
-:meth:`Document.GetKeyXref`                     PDF only: get the value of a dictionary key
+:meth:`Document.XrefGetKey`                     PDF only: get dictionary key value (also GetKeyXref)
 :meth:`Document.GetKeysXref`                    PDF only: list the keys of object at `xref`
 :meth:`Document.GetXrefObject`                  PDF only: get the definition source of `xref`
 :meth:`Document.XrefIsFont`                     Check if `xref` is a font object
@@ -143,18 +145,18 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.UpdateStream`                   Replace the stream of an object identified by *xref*, which must be a PDF dictionary
 :meth:`Document.IsStream`                       PDF only: check whether an :data:`xref` is a stream object
 :attr:`Document.ChapterCount`                   Number of chapters
-:attr:`Document.FormFonts`                      Number of chapters
+:attr:`Document.FormFonts`                      Form field font names
 :attr:`Document.IsClosed`                       Has document been closed?
 :attr:`Document.IsDirty`                        PDF only: has document been changed yet?
 :attr:`Document.IsEncrypted`                    Document (still) encrypted?
 :attr:`Document.IsFastWebaccess`                Is PDF linearized?
-:attr:`Document.IsFormPDF`                      Is this a Form PDF?
-:attr:`Document.IsPDF`                          Is this a PDF?
+:attr:`Document.IsFormPdf`                      Is this a Form PDF? (also IsFormPDF)
+:attr:`Document.IsPdf`                          Is this a PDF? (also IsPDF)
 :attr:`Document.IsReflowable`                   Is this a reflowable document?
 :attr:`Document.IsRepaired`                     PDF only: has this PDF been repaired during open?
 :attr:`Document.Language`                       Document language
 :attr:`Document.LastLocation`                   (chapter, pno) of last page
-:attr:`Document.MetaData`                       Metadata
+:attr:`Document.Metadata`                       Metadata (also MetaData)
 :attr:`Document.MarkInfo`                       PDF MarkInfo value
 :attr:`Document.Name`                           Filename of document
 :attr:`Document.NeedsPass`                      Require password to access data?
@@ -188,7 +190,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: Document(string fileName: null, byte[] stream: null, string fileType: null, Rect rect: null, float width: 0, float height: 0, float fontSize: 11, Archive archive = null)
 
-    Creates a *Document* object.
+    Creates a *Document* object. Prefer :meth:`Document.Open` to open a file; ``new Document(...)`` is the same constructor (the heading **Document.Document()** is that constructor name).
 
     * With default parameters, a **new empty PDF** document will be created.
     * If *stream* is given, then the document is created from memory and, if not a PDF, either *fileName* or *fileType* must indicate its type.
@@ -217,41 +219,68 @@ This class represents a document. It can be constructed from a file or from memo
       * HTM, HTML, XHTML: **always** opened, `metadata["format"]` is "HTML5", resp. "XHTML".
       * XML, FB2: **always** opened, `metadata["format"]` is "FictionBook2".
 
-    Overview of possible forms, note: `open` is a synonym of `Document`:
+    Overview of possible forms. Prefer :meth:`Document.Open`; ``new Document(...)`` is equivalent.
 
     .. code-block:: cs
 
         // from a file
-        Document doc = new Document("some.pdf");
+        Document doc = Document.Open("some.pdf");
         // handle wrong extension
-        doc = new Document("some.file", filetype: "xps")
+        doc = Document.Open("some.file", fileType: "xps");
 
-        // from memory, filetype is required if not a PDF
-        doc = new Document(filetype: "xps", mem_area)
-        doc = new Document(null, stream: mem_area, filetype: "xps")
-        doc = new Document(stream: mem_area, filetype: "xps")
+        // from memory, fileType is required if not a PDF
+        doc = Document.Open(mem_area, fileType: "xps");
+
+        // from a stream
+        doc = Document.Open(stream, fileType: "xps");
 
         // new empty PDF
-        doc = new Document()
-        doc = new Document("")
+        doc = Document.Open();
 
-    .. note:: Raster images with a wrong (but supported) file extension **are no problem**. MuPDF will determine the correct image type when file **content** is actually accessed and will process it without complaint. So `new Document("file.jpg")` will work even for a PNG image.
+    .. note:: Raster images with a wrong (but supported) file extension **are no problem**. MuPDF will determine the correct image type when file **content** is actually accessed and will process it without complaint. So ``Document.Open("file.jpg")`` will work even for a PNG image.
 
 
-  .. method:: GetOC(int xref)
+  .. method:: Open()
+              Open(string fileName, string fileType: null, Rect rect: null, float width: 0, float height: 0, float fontSize: 11, Archive archive: null)
+              Open(byte[] stream, string fileType: null, Rect rect: null, float width: 0, float height: 0, float fontSize: 11, Archive archive: null)
+              Open(Stream stream, string fileType: null, Rect rect: null, float width: 0, float height: 0, float fontSize: 11, Archive archive: null)
 
-    Return the cross reference number of an :data:`OCG` or :data:`OCMD` attached to an image or form XObject.
+    Preferred way to create a *Document*. Each overload forwards to the matching constructor.
 
-    :arg int xref: the :data:`xref` of an image or form XObject. Valid such cross reference numbers are returned by :meth:`Document.GetPageImages`, resp. :meth:`Document.GetPageXObjects`. For invalid numbers, an exception is raised.
+    * ``Document.Open()`` — new empty PDF.
+    * ``Document.Open(fileName, ...)`` — from a file path.
+    * ``Document.Open(stream, ...)`` — from ``byte[]`` or ``Stream``.
+
+    Parameters have the same meaning as :meth:`Document.Document`.
+
+    :arg string fileName: a UTF-8 string containing a file path.
+    :arg byte[] stream: file content as ``byte[]``, or a readable ``Stream`` (seekable streams are rewound to position 0 first).
+    :arg string fileType: a string specifying the type of document when it is not a PDF or the extension is missing.
+    :arg Rect rect: desired page size for reflowable documents.
+    :arg float width: may be used together with *height* as an alternative to *rect*.
+    :arg float height: may be used together with *width* as an alternative to *rect*.
+    :arg float fontSize: the default :data:`fontSize` for reflowable document types.
+    :arg Archive archive: an optional Archive object to use as a source for resources like fonts and images.
+
+    :return: A document object. If the document cannot be created, an exception is raised.
+
+
+  .. method:: GetOc(int xref)
+              GetOC(int xref)
+
+    Return the cross reference number of an :data:`OCG` or :data:`OCMD` attached to an image or form XObject. ``GetOC`` is the same method.
+
+    :arg int xref: the :data:`xref` of an image or form XObject. Valid such cross reference numbers are returned by :meth:`Document.GetPageImages`, resp. :meth:`Document.GetPageXobjects`. For invalid numbers, an exception is raised.
     :rtype: int
     :returns: the cross reference number of an optional contents object or zero if there is none.
 
-  .. method:: SetOC(int xref, int ocxref)
+  .. method:: SetOc(int xref, int oc)
+              SetOC(int xref, int oc)
 
-    If `xref` represents an image or form XObject, set or remove the cross reference number `oc` of an optional contents object.
+    If `xref` represents an image or form XObject, set or remove the cross reference number `oc` of an optional contents object. ``SetOC`` is the same method.
 
     :arg int xref: the :data:`xref` of an image or form xobject [#f5]_. Valid such cross reference numbers are returned by :meth:`Document.GetPageImages`, resp. :meth:`Document.GetPageXobjects`. For invalid numbers, an exception is raised.
-    :arg int ocxref: the :data:`xref` number of an :data:`OCG` / :data:`OCMD`. If not zero, an invalid reference raises an exception. If zero, any OC reference is removed.
+    :arg int oc: the :data:`xref` number of an :data:`OCG` / :data:`OCMD`. If not zero, an invalid reference raises an exception. If zero, any OC reference is removed.
 
 
   .. method:: GetLayers()
@@ -311,18 +340,18 @@ This class represents a document. It can be constructed from a file or from memo
 
 
 
-  .. method:: SetOCMD(OCMD ocmd: null, int xref: 0, int[] ocgs: null, string policy: null, dynamic[] ve: null)
+  .. method:: SetOcmd(int xref: 0, List<int> ocgs: null, string policy: null, object ve: null)
+              SetOCMD(OCMD ocmd: null, int xref: 0, int[] ocgs: null, string policy: null, object[] ve: null)
 
-    Create or update an :data:`OCMD`, **Optional Content Membership Dictionary.**
+    Create or update an :data:`OCMD`, **Optional Content Membership Dictionary.** ``SetOCMD`` is the same method; it also accepts an :data:`OCMD` object.
 
-    :arg OCMD ocmd: :data:`OCMD`
     :arg int xref: :data:`xref` of the OCMD to be updated, or 0 for a new OCMD.
-    :arg int[] ocgs: a sequence of :data:`xref` numbers of existing :data:`OCG` PDF objects.
+    :arg List<int> ocgs: a sequence of :data:`xref` numbers of existing :data:`OCG` PDF objects.
     :arg string policy: one of "AnyOn" (default), "AnyOff", "AllOn", "AllOff" (mixed or lower case).
-    :arg dynamic[] ve: a "visibility expression". This is a list of arbitrarily nested other lists -- see explanation below. Use as an alternative to the combination *ocgs* / *policy* if you need to formulate more complex conditions.
+    :arg object ve: a "visibility expression". This is a list of arbitrarily nested other lists -- see explanation below. Use as an alternative to the combination *ocgs* / *policy* if you need to formulate more complex conditions.
 
     :rtype: int
-    :returns: :data:`xref` of the OCMD. Use as `oc=xref` parameter in supporting objects, and respectively in :meth:`Document.SetOC` or :meth:`Annot.SetOC`.
+    :returns: :data:`xref` of the OCMD. Use as `oc=xref` parameter in supporting objects, and respectively in :meth:`Document.SetOc` or :meth:`Annot.SetOC`.
 
     .. note::
 
@@ -339,7 +368,7 @@ This class represents a document. It can be constructed from a file or from memo
 
         Suppose you want two PDF objects be displayed exactly one at a time (if one is ON, then the other one must be OFF):
 
-        Solution: use an **OCG** for object 1 and an **OCMD** for object 2. Create the OCMD via `SetOmd(ocgs: [xref], policy: "AllOff")`, with the :data:`xref` of the OCG.
+        Solution: use an **OCG** for object 1 and an **OCMD** for object 2. Create the OCMD via ``SetOcmd(ocgs: new List<int> { xref }, policy: "AllOff")``, with the :data:`xref` of the OCG.
 
       2. Use the **visibility expression** *ve*: This is a list of two or more items. The **first item** is a logical keyword: one of the strings **"and"**, **"or"**, or **"not"**. The **second** and all subsequent items must either be an integer or another list. An integer must be the :data:`xref` number of an OCG. A list must again have at least two items starting with one of the boolean keywords. This syntax is a bit awkward, but quite powerful:
 
@@ -349,8 +378,8 @@ This class represents a document. It can be constructed from a file or from memo
 
         **Examples:**
 
-        - `SetOCMD(ve=["or", 4, ["not", 5], ["and", 6, 7]])`. This delivers ON if the following is true: **"4 is ON, or 5 is OFF, or 6 and 7 are both ON"**.
-        - `SetOCMD(ve=["not", xref])`. This has the same effect as the OCMD example created under 1.
+        - ``SetOcmd(ve: new object[] { "or", 4, new object[] { "not", 5 }, new object[] { "and", 6, 7 } })``. This delivers ON if the following is true: **"4 is ON, or 5 is OFF, or 6 and 7 are both ON"**.
+        - ``SetOcmd(ve: new object[] { "not", xref })``. This has the same effect as the OCMD example created under 1.
 
         For more details and examples see page 224 of :ref:`AdobeManual`.
 
@@ -362,13 +391,14 @@ This class represents a document. It can be constructed from a file or from memo
 
     :rtype: `List<int>`
 
-  .. method:: GetOCMD(int xref)
+  .. method:: GetOcmd(int xref)
+              GetOCMD(int xref)
 
-    Retrieve the definition of an :data:`OCMD`.
+    Retrieve the definition of an :data:`OCMD`. ``GetOCMD`` is the same method and returns an :data:`OCMD` object.
 
     :arg int xref: the :data:`xref` of the OCMD.
-    :rtype: OCMD
-    :returns: a OCMD with the keys *xref*, *ocgs*, *policy* and *ve*.
+    :rtype: Dictionary<string, object>
+    :returns: a dictionary with the keys *xref*, *ocgs*, *policy* and *ve*. ``GetOCMD`` returns an :data:`OCMD` with the same fields.
 
 
   .. method:: GetLayer(int config: -1)
@@ -402,7 +432,7 @@ This class represents a document. It can be constructed from a file or from memo
 
         * Only reports items contained in the currently selected layer configuration.
 
-        * The meaning of the `LayerConfigUI` keys is as follows:
+        * The meaning of the :class:`LayerConfigUI` keys is as follows:
            - *Depth:* item's nesting level in the `/Order` array
            - *IsLocked:* true if cannot be changed via user interfaces
            - *Number:* running sequence number
@@ -419,7 +449,7 @@ This class represents a document. It can be constructed from a file or from memo
       To make **permanent** changes, use :meth:`Document.SetLayer`.
 
     :arg int/string number: either the sequence number of the item in list :meth:`Document.LayerUIConfigs` or the "text" of one of these items.
-    :arg int action: `PDF_OC_ON` = set on (default), `PDF_OC_TOGGLE` = toggle on/off, `PDF_OC_OFF` = set off.
+    :arg int action: :ref:`PDF_OC_ON <OptionalContentCodes>` = set on (default), :ref:`PDF_OC_TOGGLE <OptionalContentCodes>` = toggle on/off, :ref:`PDF_OC_OFF <OptionalContentCodes>` = set off.
 
 
   .. method:: Authenticate(string password)
@@ -438,7 +468,7 @@ This class represents a document. It can be constructed from a file or from memo
 
       .. note::
 
-        The document may be protected by an owner, but **not** by a user password. Detect this situation via `doc.Authenticate("") == 2`. This allows opening and reading the document without authentication, but, depending on the :attr:`Document.Permissions` value, other actions may be prohibited. MuPDF.NET (like MuPDF) in this case **ignores those restrictions**. So, -- in contrast to any PDF viewers -- you can for example extract text and add or modify content, even if the respective permission flags `PDF_PERM_COPY`, `PDF_PERM_MODIFY`, `PDF_PERM_ANNOTATE`, etc. are set off! It is your responsibility building a legally compliant application where applicable.
+        The document may be protected by an owner, but **not** by a user password. Detect this situation via `doc.Authenticate("") == 2`. This allows opening and reading the document without authentication, but, depending on the :attr:`Document.Permissions` value, other actions may be prohibited. MuPDF.NET (like MuPDF) in this case **ignores those restrictions**. So, -- in contrast to any PDF viewers -- you can for example extract text and add or modify content, even if the respective permission flags :ref:`PDF_PERM_COPY <PermissionCodes>`, :ref:`PDF_PERM_MODIFY <PermissionCodes>`, :ref:`PDF_PERM_ANNOTATE <PermissionCodes>`, etc. are set off! It is your responsibility building a legally compliant application where applicable.
 
   .. method:: GetPageNumbers(string label, bool onlyOne: false)
 
@@ -456,23 +486,27 @@ This class represents a document. It can be constructed from a file or from memo
 
      PDF only: Extract the list of page label definitions. Typically used for modifications before feeding it into :meth:`Document.SetPageLabels`.
 
-     :returns: a list of Label as defined in :meth:`Document.SetPageLabels`.
+     :returns: ``List<Dictionary<string, object>>`` with keys ``startpage``, ``prefix``, ``style``, and ``firstpagenum``. The :meth:`Document.SetPageLabels` overload that takes :class:`Label` uses the same fields as :attr:`Label.StartPage`, :attr:`Label.Prefix`, :attr:`Label.Style`, and :attr:`Label.FirstPageNum`.
 
-  .. method:: SetPageLabels(string labels)
+  .. method:: SetPageLabels(List<Dictionary<string, object>> labels)
+              SetPageLabels(List<Label> labels)
 
      PDF only: Add or update the page label definitions of the PDF.
 
-     :arg List<Label> labels: a list of `Label`. Each dictionary defines a label building rule and a 0-based "start" page number. That start page is the first for which the label definition is valid. Each dictionary has up to 4 items and looks like `{'startpage': int, 'prefix': str, 'style': str, 'firstpagenum': int}` and has the following items.
+     :arg labels: either ``List<Dictionary<string, object>>`` or ``List<Label>``. Each item is one numbering rule and a 0-based start page. Dictionary keys are ``startpage``, ``prefix``, ``style``, and ``firstpagenum``. :class:`Label` uses :attr:`Label.StartPage`, :attr:`Label.Prefix`, :attr:`Label.Style`, and :attr:`Label.FirstPageNum`.
 
-        - `StartPage`: (int) the first page number (0-based) to apply the label rule. This key **must be present**. The rule is applied to all subsequent pages until either end of document or superseded by the rule with the next larger page number.
-        - `Prefix`: (string) an arbitrary string to start the label with, e.g. "A-". Default is "".
-        - `Style`: (string) the numbering style. Available are "D" (decimal), "r"/"R" (Roman numbers, lower / upper case), and "a"/"A" (lower / upper case alphabetical numbering: "a" through "z", then "aa" through "zz", etc.). Default is "". If "", no numbering will take place and the pages in that range will receive the same label consisting of the `prefix` value. If prefix is also omitted, then the label will be "".
-        - `FirstPageNum`: (int) start numbering with this value. Default is 1, smaller values are ignored.
+        - ``startpage`` / :attr:`Label.StartPage`: (int) the first page number (0-based) to apply the label rule. This **must be present**. The rule is applied to all subsequent pages until either end of document or superseded by the rule with the next larger page number.
+        - ``prefix`` / :attr:`Label.Prefix`: (string) an arbitrary string to start the label with, e.g. ``"A-"``. Default is ``""``.
+        - ``style`` / :attr:`Label.Style`: (string) the numbering style. Available are ``"D"`` (decimal), ``"r"``/``"R"`` (Roman numbers, lower / upper case), and ``"a"``/``"A"`` (lower / upper case alphabetical numbering: "a" through "z", then "aa" through "zz", etc.). Default is ``""``. If ``""``, no numbering will take place and the pages in that range will receive the same label consisting of the prefix value. If prefix is also omitted, then the label will be ``""``.
+        - ``firstpagenum`` / :attr:`Label.FirstPageNum`: (int) start numbering with this value. Default is 1, smaller values are ignored.
 
      For example::
 
-      [{'StartPage': 6, 'Prefix': 'A-', 'Style': 'D', 'FirstPageNum': 10},
-       {'StartPage': 10, 'Prefix': '', 'Style': 'D', 'FirstPageNum': 1}]
+        doc.SetPageLabels(new List<Label>
+        {
+            new Label { StartPage = 6, Prefix = "A-", Style = "D", FirstPageNum = 10 },
+            new Label { StartPage = 10, Prefix = "", Style = "D", FirstPageNum = 1 },
+        });
 
      will generate the labels "A-10", "A-11", "A-12", "A-13", "1", "2", "3", ... for pages 6, 7 and so on until end of document. Pages 0 through 5 will have the label "".
 
@@ -537,6 +571,16 @@ This class represents a document. It can be constructed from a file or from memo
     :rtype: int
 
 
+  .. method:: GetLocationFromPageNumber(int pno)
+  .. method:: LocationFromPageNumber(int pno)
+
+    Convert a 0-based page number to ``(chapter, page)``.
+
+    :arg int pno: page number, 0-based.
+
+    :rtype: ``(int chapter, int page)``
+
+
 
 
 
@@ -555,7 +599,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. note::
 
-        Documents also support index access, matching PyMuPDF ``doc[n]`` / ``doc[(chapter, pno)]``:
+        Documents also support index access:
 
         * ``doc[n]`` is ``doc.LoadPage(n)`` (membership check then load; out of range raises ``IndexOutOfRangeException``).
         * ``doc[(chapter, pno)]`` loads a chapter page. For PDFs, chapter count is 1, so ``doc[(0, pno)]`` is valid.
@@ -678,31 +722,26 @@ This class represents a document. It can be constructed from a file or from memo
 
     :returns: :doc:`Outline` instance.
 
-  .. method:: GetPages(int start, int stop, int step)
+  .. method:: Pages(int? start: null, int? stop: null, int? step: null)
+              GetPages(int start, int stop, int step)
 
-    A generator for a range of pages. Parameters have the same meaning as in the built-in function *range()*. Intended for expressions of the form *"for page in doc.pages(start, stop, step): ..."*.
+    Iterates pages from *start* (inclusive) to *stop* (exclusive) stepping by *step*. ``Pages`` has optional arguments (default *start* is 0, default *stop* is :attr:`Document.PageCount`, default *step* is 1) and returns ``IEnumerable<Page>``. ``GetPages`` requires all three arguments and returns ``List<Page>``.
 
-    :arg int start: start iteration with this page number. Default is zero, allowed values are `-∞ < start < PageCount`. While this is negative, :attr:`PageCount` is added **before** starting the iteration.
-    :arg int stop: stop iteration at this page number. Default is :attr:`PageCount`, possible are `-∞ < stop <= PageCount`. Larger values are **silently replaced** by the default. Negative values will cyclically emit the pages in reversed order.
-    :arg int step: stepping value. Defaults are 1 if start < stop and -1 if start > stop. Zero is not allowed.
+    :arg int? start: first page number (0-based, inclusive).
+    :arg int? stop: page number at which to stop (exclusive).
+    :arg int? step: stepping value. Must not be zero.
 
-    :returns: a generator iterator over the document's pages. Some examples:
-
-        * "doc.GetPages()" emits all pages.
-        * "doc.GetPages(4, 9, 2)" emits pages 4, 6, 8.
-        * "doc.GetPages(0, None, 2)" emits all pages with even numbers.
-        * "doc.GetPages(-2)" emits the last two pages.
-        * "doc.GetPages(-1, -1)" emits all pages in reversed order.
-        * "doc.GetPages(-1, -10)" always emits 10 pages in reversed order, starting with the last page -- **repeatedly** if the document has less than 10 pages. So for a 4-page document the following page numbers are emitted: 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3.
+    :returns: ``IEnumerable<Page>`` from ``Pages``, or ``List<Page>`` from ``GetPages``. Example: ``doc.Pages(4, 9, 2)`` yields pages 4, 6, 8.
 
   .. index::
-     pair: fromPage; Document.Convert2Pdf
-     pair: toPage; Document.Convert2Pdf
-     pair: rotate; Document.Convert2Pdf
+     pair: fromPage; Document.ConvertToPdf
+     pair: toPage; Document.ConvertToPdf
+     pair: rotate; Document.ConvertToPdf
 
-  .. method:: Convert2Pdf(int fromPage: 0, int toPage: -1, int rotate: 0)
+  .. method:: ConvertToPdf(int fromPage: 0, int toPage: -1, int rotate: 0)
+              Convert2Pdf(int fromPage: 0, int toPage: -1, int rotate: 0)
 
-    Create a PDF version of the current document and write it to memory. **All document types** are supported. The parameters have the same meaning as in :meth:`InsertPdf`. In essence, you can restrict the conversion to a page subset, specify page rotation, and revert page sequence.
+    Create a PDF version of the current document and write it to memory. **All document types** are supported. ``Convert2Pdf`` is the same method. The parameters have the same meaning as in :meth:`InsertPdf`. In essence, you can restrict the conversion to a page subset, specify page rotation, and revert page sequence.
 
     :arg int fromPage: first page to copy (0-based). Default is first page.
 
@@ -724,18 +763,18 @@ This class represents a document. It can be constructed from a file or from memo
 
     Creates a table of contents (TOC) out of the document's outline chain.
 
-    :arg bool simple: Indicates whether a simple or a detailed TOC is required. If *false*, each item of the list also contains a dictionary with :ref:`linkDest` details for each outline entry.
+    :arg bool simple: Indicates whether a simple or a detailed TOC is required. If *false*, each item of the list also contains a dictionary with :ref:`LinkDest <linkDest Kinds>` details for each outline entry.
 
     :rtype: TocResult
 
-    :returns: a ``TocResult`` (also usable as ``List<Toc>``). Each entry has the form *[lvl, title, page, dest]*. Pass the result to :meth:`Document.SetToc` to copy bookmarks (PyMuPDF ``set_toc(get_toc(...))``). Fields:
+    :returns: a ``TocResult`` (also usable as ``List<Toc>``). Each entry has the form *[lvl, title, page, dest]*. Pass the result to :meth:`Document.SetToc` to copy bookmarks (``doc.SetToc(src.GetToc())``). Fields:
 
       * *lvl* -- hierarchy level (positive *int*). The first entry is always 1. Entries in a row are either **equal**, **increase** by 1, or **decrease** by any number.
       * *title* -- title (*string*)
       * *page* -- 1-based source page number (*int*). `-1` if no destination or outside document.
       * *dest* -- (*dict*) included only if *simple=false*. Contains details of the TOC item as follows:
 
-        - kind: destination kind, see :ref:`LinkDest Kinds`.
+        - kind: destination kind, see :ref:`linkDest Kinds`.
         - file: filename if kind is :data:`LINK_GOTOR` or :data:`LINK_LAUNCH`.
         - page: target page, 0-based, :data:`LINK_GOTOR` or :data:`LINK_GOTO` only.
         - to: position on target page (:ref:`Point`).
@@ -756,9 +795,10 @@ This class represents a document. It can be constructed from a file or from memo
 
     :returns: a tuple of dictionary keys present in object :data:`xref`.
 
-  .. method:: GetKeyXref(int xref, string key)
+  .. method:: XrefGetKey(int xref, string key)
+              GetKeyXref(int xref, string key)
 
-    PDF only: Return type and value of a PDF dictionary key of a :data:`dictionary` object given by its xref.
+    PDF only: Return type and value of a PDF dictionary key of a :data:`dictionary` object given by its xref. ``GetKeyXref`` is the same method.
 
     :arg int xref: the :data:`xref`. Use `-1` to access the special dictionary "PDF trailer".
 
@@ -806,7 +846,7 @@ This class represents a document. It can be constructed from a file or from memo
       - "(...)" for ASCII-only text. Reserved PDF characters must be backslash-escaped and non-ASCII characters must be provided as 3-digit backslash-escaped octals -- including leading zeros. Example: 12 = 0x0C must be encoded as `\014`.
       - "<...>" for hex-encoded text. Every character must be represented by two hex-digits (lower or upper case).
 
-      - If in doubt, we **strongly recommend** to use :meth:`GetPdfStr`! This function automatically generates the right brackets, escapes, and overall format.
+      - If in doubt, we **strongly recommend** to use :meth:`Utils.GetPdfString`! This function automatically generates the right brackets, escapes, and overall format.
 
   .. method:: GetPagePixmap(int pno, Matrix matrix: IdentityMatrix, int dpi: 0, string colorSpace: null, Rect clip: null, bool alpha: false, bool annots: true)
 
@@ -818,9 +858,10 @@ This class represents a document. It can be constructed from a file or from memo
 
     :rtype: :ref:`Pixmap`
 
-  .. method:: GetPageXObjects(int pno)
+  .. method:: GetPageXobjects(int pno)
+              GetPageXObjects(int pno)
 
-    PDF only: Return a list of all XObjects referenced by a page.
+    PDF only: Return a list of all XObjects referenced by a page. ``GetPageXObjects`` is the same method and returns ``List<Entry>``.
 
     :arg int pno: page number, 0-based, `-∞ < pno < PageCount`.
 
@@ -857,7 +898,7 @@ This class represents a document. It can be constructed from a file or from memo
           * **Name** (*string*) is the symbolic name by which the image is referenced
           * **Filter** (*string*) is the decode filter of the image (:ref:`AdobeManual`, pp. 22).
 
-    .. note:: In general, this is not the list of images that are **actually displayed**. This method only parses several PDF objects to collect references to embedded images. It does not analyse the page's :data:`contents`, where all the actual image display commands are defined. To get this information, please use :meth:`Page.get_image_info`. Also have a look at the discussion in section :ref:`textpagedict`.
+    .. note:: In general, this is not the list of images that are **actually displayed**. This method only parses several PDF objects to collect references to embedded images. It does not analyse the page's :data:`contents`, where all the actual image display commands are defined. To get this information, please use :meth:`Page.GetImageInfo`. Also have a look at the discussion in section :ref:`textpagedict`.
 
 
   .. method:: GetPageFonts(int pno, bool full: false)
@@ -905,7 +946,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. note::
 
-     The methods :meth:`ToMarkdown`, :meth:`ToJson`, :meth:`ToText` and :meth:`ToChunks` are convenience wrappers around the equivalent `MuPDF4LLM` methods, for preparing document content for LLM and RAG workflows. Several of them depend on the **layout pipeline**, which must be switched on first with `MuPDF4LLM.SetUseLayout(true)` (or `MuPDF4LLM.UseLayout = true`). Parameters marked *(layout mode)* only take effect when the layout pipeline is active.
+     The methods :meth:`ToMarkdown`, :meth:`ToJson`, :meth:`ToText` and :meth:`ToChunks` prepare document content for LLM and RAG workflows. Several of them depend on the **layout pipeline**, which must be switched on first with :meth:`Utils.UseLayout` (`true`). Parameters marked *(layout mode)* only take effect when the layout pipeline is active.
 
   .. method:: ToMarkdown(bool header: true, bool footer: true, List<int> pages: null, bool writeImages: false, bool embedImages: false, string imagePath: "", string imageFormat: "png", string filename: "", bool forceText: true, bool pageChunks: false, bool pageSeparators: false, int dpi: 150, int ocrDpi: 150, float pageWidth: 612, float? pageHeight: null, bool ignoreCode: false, bool showProgress: false, bool useOcr: true, string ocrLanguage: "eng", bool forceOcr: false, OcrPageFunction ocrFunction: null, string tableOutput: "markdown", float? edgeThreshold: null)
 
@@ -940,7 +981,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     .. code-block:: cs
 
-        Document doc = new Document("input.pdf");
+        Document doc = Document.Open("input.pdf");
         string md = doc.ToMarkdown(pages: new List<int> { 0, 1 });
         File.WriteAllText("output.md", md);
 
@@ -948,7 +989,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Converts the document to a JSON representation of its layout: every page with its classified layout boxes (text, titles, tables, pictures, headers, footers and so on), their bounding boxes and content.
 
-    **Requires the layout pipeline.** Raises `NotSupportedException` if `MuPDF4LLM.UseLayout` is `false`.
+    **Requires the layout pipeline.** Raises `NotSupportedException` if :attr:`Utils.LayoutEnabled` is `false`.
 
     :arg int imageDpi: resolution of extracted images.
     :arg string imageFormat: image file format, for example `"png"`.
@@ -973,7 +1014,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Converts the document to plain text in reading order, with tables drawn as text tables.
 
-    **Requires the layout pipeline.** Raises `NotSupportedException` if `MuPDF4LLM.UseLayout` is `false`.
+    **Requires the layout pipeline.** Raises `NotSupportedException` if :attr:`Utils.LayoutEnabled` is `false`.
 
     :arg string filename: file name stored in the metadata of the result.
     :arg bool header: include page-header regions in the output.
@@ -1000,7 +1041,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Splits the document into retrieval-ready chunks for RAG pipelines. The document is broken into sentences, and chunk boundaries are placed where the layout suggests a natural break (new heading, table, page, large gap and so on), within the given token limits.
 
-    **Requires the layout pipeline.** Raises `NotSupportedException` if `MuPDF4LLM.UseLayout` is `false`.
+    **Requires the layout pipeline.** Raises `NotSupportedException` if :attr:`Utils.LayoutEnabled` is `false`.
 
     :arg int maxTokens: maximum tokens per chunk. Must be positive.
     :arg int minTokens: target minimum tokens per chunk. Must not be negative.
@@ -1011,7 +1052,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg string headerFooterMode: `"exclude"` (default) drops page headers and footers, `"include"` keeps them, and `"auto"` drops only headers and footers that repeat across pages.
     :arg string sentenceSplitter: `"default"` or `"multilingual"`.
     :arg object tokenizer: a `Func<string, int>` that returns the token count of a string. `null` (or any other type) estimates tokens as characters / 4.
-    :arg Dictionary<string,float> weights: overrides for the boundary-scoring weights. Keys are `w_box`, `w_class`, `w_page`, `w_gap`, `w_hgap`, `w_font`, `w_head`, `w_foot`, `w_list`, `w_table` and `w_caption`.
+    :arg Dictionary<string,float> weights: overrides for the boundary-scoring weights. Keys are ``w_box``, ``w_class``, ``w_page``, ``w_gap``, ``w_hgap``, ``w_font``, ``w_head``, ``w_foot``, ``w_list``, ``w_table`` and ``w_caption``.
     :arg List<int> pages: 0-based page numbers to process. `null` processes all pages.
     :arg string tableOutput: `"markdown"` (default) or `"html"` table rendering.
     :arg bool extractImages: include the image bytes of figures in the result (see :attr:`ChunkedDocument.Figures`).
@@ -1025,12 +1066,12 @@ This class represents a document. It can be constructed from a file or from memo
     Invalid values for *tableMode*, *headerFooterMode*, *sentenceSplitter*, *tableOutput*, *maxTokens* or *minTokens* raise `ArgumentException`.
 
     :rtype: :ref:`ChunkedDocument`
-    :returns: a read-only list of :class:`ChunkedDocument.Chunk` objects. Each chunk has an ``Id``, its ``Text`` and ``Metadata`` (pages, bounding boxes, section path, token count and so on). The result also offers :attr:`ChunkedDocument.Tables`, :attr:`ChunkedDocument.Figures` and :attr:`ChunkedDocument.Sections` views of the document.
+    :returns: a read-only list of :ref:`Chunk <ChunkedDocument_Chunk>` objects. Each chunk has an ``Id``, its ``Text`` and ``Metadata`` (pages, bounding boxes, section path, token count and so on). The result also offers :attr:`ChunkedDocument.Tables`, :attr:`ChunkedDocument.Figures` and :attr:`ChunkedDocument.Sections` views of the document.
 
     .. code-block:: cs
 
-        MuPDF4LLM.SetUseLayout(true);
-        Document doc = new Document("input.pdf");
+        Utils.UseLayout(true);
+        Document doc = Document.Open("input.pdf");
         ChunkedDocument chunks = doc.ToChunks(maxTokens: 300);
         foreach (Chunk chunk in chunks)
             Console.WriteLine($"{chunk.Id}: {chunk.Text}");
@@ -1057,7 +1098,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: SetLayout(Rect rect: null, float width: 0, float height: 0, int fontSize: 11)
     
-    Re-paginate ("reflow") the document based on the given page dimension and fontSize. This only affects some document types like e-books and HTML. Ignored if not supported. Supported documents have *true* in property :attr:`is_reflowable`.
+    Re-paginate ("reflow") the document based on the given page dimension and fontSize. This only affects some document types like e-books and HTML. Ignored if not supported. Supported documents have *true* in property :attr:`Document.IsReflowable`.
 
     :arg Rect rect: desired page size. Must be finite, not empty and start at point (0, 0).
     :arg float width: use it together with *height* as alternative to *rect*.
@@ -1071,11 +1112,11 @@ This class represents a document. It can be constructed from a file or from memo
     :arg string language: the language locale you want to set.
 
 
-  .. method:: Select(List<int> list)
+  .. method:: Select(int[] pages)
 
-    PDF only: Keeps only those pages of the document whose numbers occur in the list. Empty sequences or elements outside `range(doc.PageCount)` will cause a *ValueError*. For more details see remarks at the bottom or this chapter.
+    PDF only: Keeps only those pages of the document whose numbers occur in the list. Empty sequences or elements outside ``0 .. doc.PageCount - 1`` will cause an exception. For more details see remarks at the bottom or this chapter. An overload ``Select(List<int> pages)`` also exists.
 
-    :arg List<int> s: The sequence (see :ref:`SequenceTypes`) of page numbers (zero-based) to be included. Pages not in the sequence will be deleted (from memory) and become unavailable until the document is reopened. **Page numbers can occur multiple times and in any order:** the resulting document will reflect the sequence exactly as specified.
+    :arg int[] pages: The page numbers (zero-based) to be included. Pages not in the sequence will be deleted (from memory) and become unavailable until the document is reopened. **Page numbers can occur multiple times and in any order:** the resulting document will reflect the sequence exactly as specified.
 
     .. note::
 
@@ -1090,7 +1131,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     PDF only: Sets or updates the metadata of the document as specified in *m*, a dictionary.
 
-    :arg Dictionary<string, string> m: A dictionary with the same keys as *metadata* (see below). All keys are optional. A PDF's format and encryption method cannot be set or changed and will be ignored. If any value should not contain data, do not specify its key or set the value to `None`. If you use an empty dictionary all metadata information will be cleared to the string *"none"*. If you want to selectively change only some values, modify a copy of *doc.metadata* and use it as the argument. Arbitrary unicode values are possible if specified as UTF-8-encoded.
+    :arg Dictionary<string, string> m: A dictionary with the same keys as *Metadata* (see below). All keys are optional. A PDF's format and encryption method cannot be set or changed and will be ignored. If any value should not contain data, do not specify its key or set the value to ``null``. If you use an empty dictionary all metadata information will be cleared to the string *"none"*. If you want to selectively change only some values, modify a copy of ``doc.Metadata`` and use it as the argument. Arbitrary unicode values are possible if specified as UTF-8-encoded.
 
     Empty values or "none" are not written, but completely omitted.
 
@@ -1150,7 +1191,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     - Step 2 creates a new TOC from the entries contained in *toc*.
 
-    The preferred call is the PyMuPDF roundtrip: ``newDoc.SetToc(pdf.GetToc(simple: false))``. That keeps dest dictionaries (zoom, named dest, color, collapse, …).
+    The preferred call is ``newDoc.SetToc(pdf.GetToc(simple: false))``. That keeps dest dictionaries (zoom, named dest, color, collapse, …).
 
     Overloads:
 
@@ -1160,7 +1201,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg toc:
 
-        **All bookmark entries** that should form the new table of contents. To completely remove the table of contents specify an empty sequence or None. Each item must have the following format.
+        **All bookmark entries** that should form the new table of contents. To completely remove the table of contents specify an empty sequence or ``null``. Each item must have the following format.
 
         * [Level, Title, Page [, Dest]] where
 
@@ -1170,16 +1211,16 @@ This class represents a document. It can be constructed from a file or from memo
 
           - **Page** (int) is the target page number **(attention: 1-based)**. Must be in valid range if positive. Set it to -1 if there is no target, or the target is external.
 
-          - **Dest** (optional) is a dictionary or a number. If a number, it will be interpreted as the desired height (in points) this entry should point to on the page. Use a dictionary (like the one given as output by `GetToc(false)`) for a detailed control of the bookmark's properties, see :meth:`Document.GetToc` for a description.
+          - **Dest** (optional) is a dictionary or a number. If a number, it will be interpreted as the desired height (in points) this entry should point to on the page. Use a dictionary (like the one given as output by :meth:`Document.GetToc` with ``simple: false``) for a detailed control of the bookmark's properties, see :meth:`Document.GetToc` for a description.
 
-    :arg int collapse: controls the hierarchy level beyond which outline entries should initially show up collapsed. The default 1 will hence only display level 1, higher levels must be unfolded using the PDF viewer. To unfold everything, specify either a large integer, 0 or None.
+    :arg int collapse: controls the hierarchy level beyond which outline entries should initially show up collapsed. The default 1 will hence only display level 1, higher levels must be unfolded using the PDF viewer. To unfold everything, specify either a large integer or 0.
 
     :rtype: int
     :returns: the number of inserted, resp. deleted items.
 
     Copy TOC after :meth:`Document.InsertPdf` (TOC is not copied with the pages)::
 
-        using var pdf = new Document("input.pdf");
+        using var pdf = Document.Open("input.pdf");
         using var newDoc = new Document();
         newDoc.InsertPdf(pdf);
         newDoc.SetToc(pdf.GetToc(simple: false));
@@ -1193,18 +1234,18 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int idx: the index of the item in list :meth:`Document.GetToc`.
 
 
-  .. method:: SetTocItem(int idx, Link dest, int kind: 0, int pno: 0, string uri: null, string title: null, Point to: null, string filename: null, float zoom: 0)
+  .. method:: SetTocItem(int idx, Dictionary<string, object> destDict: null, int? kind: null, int? pno: null, string uri: null, string title: null, Point to: null, string filename: null, float zoom: 0)
 
     PDF only: Changes the TOC item identified by its index. Change the item **title**, **destination**, **appearance** (color, bold, italic) or collapsing sub-items -- or to remove the item altogether.
 
     Use this method if you need specific changes for selected entries only and want to avoid replacing the complete TOC. This is beneficial especially when dealing with large table of contents.
 
     :arg int idx: the index of the entry in the list created by :meth:`Document.GetToc`.
-    :arg Link dest: the new destination. A dictionary like the last entry of an item in `doc.GetToc(false)`. Using this as a template is recommended. When given, **all other parameters are ignored** -- except title.
-    :arg int kind: the link kind, see :ref:`LinkDest Kinds`. If :data:`LINK_NONE`, then all remaining parameter will be ignored, and the TOC item will be removed -- same as :meth:`Document.DeleteTocItem`. If None, then only the title is modified and the remaining parameters are ignored. All other values will lead to making a new destination dictionary using the subsequent arguments.
-    :arg int pno: the 1-based page number, i.e. a value 1 <= pno <= doc.PageCount. Required for LINK_GOTO.
+    :arg destDict: the new destination. A dictionary like the last entry of an item in ``doc.GetToc(simple: false)``. Using this as a template is recommended. When given, **all other parameters are ignored** -- except title.
+    :arg int? kind: the link kind, see :ref:`linkDest Kinds`. If :data:`LINK_NONE`, then all remaining parameter will be ignored, and the TOC item will be removed -- same as :meth:`Document.DeleteTocItem`. If ``null``, then only the title is modified and the remaining parameters are ignored. All other values will lead to making a new destination dictionary using the subsequent arguments.
+    :arg int? pno: the 1-based page number, i.e. a value 1 <= pno <= doc.PageCount. Required for LINK_GOTO.
     :arg string uri: the URL text. Required for LINK_URI.
-    :arg string title: the desired new title. None if no change.
+    :arg string title: the desired new title. ``null`` if no change.
     :arg Point to: (optional) points to a coordinate on the target page. Relevant for LINK_GOTO. If omitted, a point near the page's top is chosen.
     :arg string filename: required for LINK_GOTOR and LINK_LAUNCH.
     :arg float zoom: use this zoom factor when showing the target page.
@@ -1221,7 +1262,7 @@ This class represents a document. It can be constructed from a file or from memo
     
     All pages will look the same, but will no longer have annotations, respectively fields. The visible parts will be converted to standard text, vector graphics or images as required.
 
-    The method may thus be a viable **alternative for PDF-to-PDF conversions** using :meth:`Document.Convert2Pdf`.
+    The method may thus be a viable **alternative for PDF-to-PDF conversions** using :meth:`Document.ConvertToPdf`.
 
     Please consider that annotations are complex objects and may consist of more data "underneath" their visual appearance. Examples are "Text" and "FileAttachment" annotations. When "baking in" annotations / widgets with this method, all this underlying information (attached files, comments, associated PopUp annotations, etc.) will be lost irrevocably and be removed on next garbage collection.
 
@@ -1255,11 +1296,11 @@ This class represents a document. It can be constructed from a file or from memo
     :arg bool xmlMetadata: Remove XML metadata.
 
 
-  .. method:: Save(string filename, int garbage: 0, int clean: 0, int deflate: 0, int deflateImages: 0, int deflateFonts: false, int incremental: 0, int ascii: 0, int expand: 0, int linear: 0, int noNewId: 0, int pretty: 0, int encryption: PDF_ENCRYPT_NONE, int permissions: 4095, string ownerPW: null, string userPW: null, int preserveMetadata: 1, int useObjstms: 0, compressionEffort:0, raiseOnRepair: false)
+  .. method:: Save(string filename, int garbage: 0, int clean: 0, int deflate: 0, int deflateImages: 0, int deflateFonts: 0, int incremental: 0, int ascii: 0, int expand: 0, int linear: 0, int noNewId: 0, int pretty: 0, int encryption: PDF_ENCRYPT_NONE, int permissions: 4095, string ownerPW: null, string userPW: null, int preserveMetadata: 1, int useObjstms: 0, compressionEffort: 0, raiseOnRepair: false)
 
     PDF only: Saves the document in its **current state**.
 
-    :arg string filename: The file path to save to. A file object must have been created before via `open(...)`.
+    :arg string filename: The file path to save to.
 
     :arg int garbage: Do garbage collection. Positive values exclude "incremental".
 
@@ -1275,7 +1316,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int deflateImages: Deflate (compress) uncompressed image streams [#f4]_.
     :arg int deflateFonts: Deflate (compress) uncompressed fontFile streams [#f4]_.
  
-    :arg int incremental: Only save changes to the PDF. Excludes "garbage" and "linear". Can only be used if *outfile* is a string or a `pathlib.Path` and equal to :attr:`Document.name`. Cannot be used for files that are decrypted or repaired and also in some other cases. To be sure, check :meth:`Document.CanSaveIncrementally`. If this is false, saving to a new file is required.
+    :arg int incremental: Only save changes to the PDF. Excludes "garbage" and "linear". Can only be used if *outfile* is a string path equal to :attr:`Document.Name`. Cannot be used for files that are decrypted or repaired and also in some other cases. To be sure, check :meth:`Document.CanSaveIncrementally`. If this is false, saving to a new file is required.
 
     :arg int ascii: convert binary data to ASCII.
 
@@ -1319,7 +1360,7 @@ This class represents a document. It can be constructed from a file or from memo
       **File size reduction**
 
       1. Use the save options like `garbage: 3|4, deflate: true, useObjstms: true|1`. Do not touch the default values `expand: false|0, clean: false|0, incremental: false|0`.
-      This is a "lossless" file size reduction. There is a convenience version of this method with these values set by default, :meth:`Document.ez_save` -- please see below. 
+      This is a "lossless" file size reduction. There is a convenience version of this method with these values set by default, :meth:`Document.EzSave` -- please see below. 
 
       1. "Lossy" file size reduction in essence must give up something with respect to images, like (a) remove all images (b) replace images by their grayscale versions (c) reduce image resolutions.
 
@@ -1340,7 +1381,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: ToBytes(int garbage: 0, int clean: 0, int deflate: 0, int deflateImages: 0, int deflateFonts: 0, int ascii: 0, int expand: 0, int linear: 0, int pretty: 0, int noNewId: 0, int encryption: PDF_ENCRYPT_NONE, int permissions: -1, string ownerPW: null, string userPW: null, int useObjstms: 0)
 
-    PDF only: Writes the **current content of the document** to a bytes object instead of to a file. Obviously, you should be wary about memory requirements. The meanings of the parameters exactly equal those in :meth:`save`.
+    PDF only: Writes the **current content of the document** to a bytes object instead of to a file. Obviously, you should be wary about memory requirements. The meanings of the parameters exactly equal those in :meth:`Document.Save`.
 
     :rtype: byte[]
     :returns: a bytes object containing the complete document.
@@ -1378,7 +1419,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg bool links: Choose whether (internal and external) links should be included in the copy. Default is `true`. *Named* links (:data:`LINK_NAMED`) and internal links to outside the copied page range are **always excluded**. 
     :arg bool annots: Choose whether annotations should be included in the copy. Form **fields can never be copied** -- see below.
-    :arg int showProgress: Specify an interval size greater zero to see progress messages on `sys.stdout`. After each interval, a message like `Inserted 30 of 47 pages.` will be printed.
+    :arg int showProgress: Specify an interval size greater zero to see progress messages on the console. After each interval, a message like ``Inserted 30 of 47 pages.`` will be printed.
     :arg int final: Controls whether the list of already copied objects should be **dropped** after this method, default *true*. Set it to 0 except for the last one of multiple insertions from the same source PDF. This saves target file size and speeds up execution considerably.
 
   .. note::
@@ -1387,7 +1428,7 @@ This class represents a document. It can be constructed from a file or from memo
 
      2. If `fromPage > toPage`, pages will be **copied in reverse order**. If `0 <= fromPage == toPage`, then one page will be copied.
 
-     3. `docsrc` TOC entries **will not be copied**. Recover them with ``newDoc.SetToc(pdf.GetToc(simple: false))`` (same as PyMuPDF ``set_toc(get_toc(simple=False))``). For joining several files while stitching TOC ranges, see `https://github.com/ArtifexSoftware/MuPDF.NET/tree/main/Examples/JoinDoc`_ in the *examples* directory.
+     3. `docsrc` TOC entries **will not be copied**. Recover them with ``newDoc.SetToc(pdf.GetToc(simple: false))``.
 
 
   .. index::
@@ -1430,19 +1471,22 @@ This class represents a document. It can be constructed from a file or from memo
      pair: width; Document.InsertPage
      pair: height; Document.InsertPage
      pair: fontName; Document.InsertPage
-     pair: fontFile; Document.InsertPage
      pair: color; Document.InsertPage
 
-  .. method:: InsertPage(int pno, string text, string fontName, string fontFile, float fontSize: 11, float width: 595, float height: 842, float[] color: null)
+  .. method:: InsertPage(int pno: -1, string text: null, float fontSize: 11, float width: 595, float height: 842, string fontName: "helv", float[] color: null)
 
-    PDF only: Insert a new page and insert some text. Convenience function which combines :meth:`Document.NewPage` and (parts of) :meth:`Page.InsertText`.
+    PDF only: Insert a new page and optionally insert some text. Convenience function which combines :meth:`Document.NewPage` and (parts of) :meth:`Page.InsertText`.
 
-    :arg int pno: page number (0-based) **in front of which** to insert. Must be in `range(-1, doc.PageCount + 1)`. Special values -1 and `doc.PageCount` insert **after** the last page.
+    :arg int pno: page number (0-based) **in front of which** to insert. Must be in ``-1 .. doc.PageCount``. Special values -1 and ``doc.PageCount`` insert **after** the last page.
+    :arg string text: text to insert at (72, 72). Omit or ``null`` to insert an empty page.
+    :arg float fontSize: font size. Default 11.
+    :arg float width: page width. Default 595.
+    :arg float height: page height. Default 842.
+    :arg string fontName: font name. Default ``"helv"``.
+    :arg float[] color: text color.
 
-    For the other parameters, please consult the aforementioned methods.
-
-    :rtype: int
-    :returns: the result of :meth:`Page.InsertText` (number of successfully inserted lines).
+    :rtype: Page
+    :returns: the new page.
 
   .. method:: DeletePage(int pno: -1)
 
@@ -1450,31 +1494,28 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int pno: the page to be deleted. Negative number count backwards from the end of the document (like with indices). Default is the last page.
 
-  .. method:: DeletePages(*args, **kwds)
+  .. method:: DeletePages(params int[] pages)
+              DeletePages(int fromPage, int toPage)
 
     PDF only: Delete multiple pages given as 0-based numbers.
 
-    **Format 1:** Use keywords. Represents the old format. A contiguous range of pages is removed.
-      * "fromPage": first page to delete. Zero if omitted.
-      * "toPage": last page to delete. Last page in document if omitted. Must not be less then "from_page".
+    :arg int[] pages: page numbers to delete. Any order is allowed.
+    :arg int fromPage: first page of a contiguous range (inclusive).
+    :arg int toPage: last page of a contiguous range (inclusive). If ``fromPage > toPage``, the range is swapped.
 
-    **Format 2:** Two page numbers as positional parameters. Handled like Format 1.
-
-    **Format 3:** One positional integer parameter. Equivalent to :meth:`Page.DeletePage`.
-
-    **Format 4:** One positional parameter of type *list*, *tuple* or *range()* of page numbers. The items of this sequence may be in any order and may contain duplicates.
+    A call with two integers, such as ``doc.DeletePages(500, 519)``, uses the range overload. Pass three or more integers, or an ``int[]``, to delete that exact set of pages.
 
     .. note::
 
-      In an effort to maintain a valid PDF structure, this method and :meth:`DeletePage` will also deactivate items in the table of contents which point to deleted pages. "Deactivation" here means, that the bookmark will point to nowhere and the title will be shown grayed-out by supporting PDF viewers. The overall TOC structure is left intact.
+      In an effort to maintain a valid PDF structure, this method and :meth:`DeletePage` will also deactivate items in the table of contents which point to deleted pages. "Deactivation" here means that the bookmark will point to nowhere and the title will be shown grayed-out by supporting PDF viewers. The overall TOC structure is left intact.
 
       It will also remove any **links on remaining pages** which point to a deleted one. This action may have an extended response time for documents with many pages.
 
       Following examples will all delete pages 500 through 519:
 
-      * `doc.DeletePage(500, 519)`
-      * `doc.DeletePage(fromPage: 500, toPage: 519)`
-      * `doc.DeletePage(new List<int>(){ 500, 501, 502, ... , 519})`
+      * ``doc.DeletePages(500, 519)``
+      * ``doc.DeletePages(fromPage: 500, toPage: 519)``
+      * ``doc.DeletePages(Enumerable.Range(500, 20).ToArray())``
 
       For the :ref:`AdobeManual` the above takes about 0.6 seconds, because the remaining 1290 pages must be cleaned from invalid links.
 
@@ -1489,11 +1530,12 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int to: the page number in front of which to copy. The default inserts **after** the last page.
 
-    .. note:: Only a new **reference** to the page object will be created -- not a new page object, all copied pages will have identical attribute values, including the :attr:`Page.xref`. This implies that any changes to one of these copies will appear on all of them.
+    .. note:: Only a new **reference** to the page object will be created -- not a new page object, all copied pages will have identical attribute values, including the :attr:`Page.Xref`. This implies that any changes to one of these copies will appear on all of them.
 
-  .. method:: CopyFullPage(int pno, int to=-1)
+  .. method:: FullCopyPage(int pno, int to: -1)
+              CopyFullPage(int pno, int to: -1)
 
-    PDF only: Make a full copy (duplicate) of a page.
+    PDF only: Make a full copy (duplicate) of a page. ``CopyFullPage`` is the same method.
 
     :arg int pno: the page to be duplicated. Must be in range `0 <= pno < PageCount`.
 
@@ -1514,16 +1556,19 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int to: the page number in front of which to insert the moved page. The default moves **after** the last page.
 
 
-  .. method:: NeedAppearances(int value: 0)
+  .. attribute:: NeedAppearances
 
-    PDF only: Get or set the */NeedAppearances* property of Form PDFs. Quote: *"(Optional) A flag specifying whether to construct appearance streams and appearance dictionaries for all widget annotations in the document ... Default value: false."* This may help controlling the behavior of some readers / viewers.
+    PDF only: The */NeedAppearances* property of Form PDFs. Quote: *"(Optional) A flag specifying whether to construct appearance streams and appearance dictionaries for all widget annotations in the document ... Default value: false."* This may help controlling the behavior of some readers / viewers.
 
-    :arg bool value: set the property to this value. If omitted or `null`, inquire the current value.
+    *false* if this is not a Form PDF, the property is missing, or the flag is off.
 
-    :rtype: bool
-    :returns:
-       * None: not a Form PDF, or property not defined.
-       * true / false: the value of the property (either just set or existing for inquiries). Has no effect if no Form PDF.
+    :type: bool
+
+  .. method:: SetNeedAppearances(bool value)
+
+    PDF only: Set the */NeedAppearances* property of Form PDFs. Has no effect if no Form PDF.
+
+    :arg bool value: the new flag value.
 
   .. method:: GetSigFlags()
 
@@ -1536,19 +1581,20 @@ This class represents a document. It can be constructed from a file or from memo
        * 3:  contains signatures that may be invalidated if the file is saved (written) in a way that alters its previous contents, as opposed to an incremental update.
 
   .. index::
-     pair: filename; Document.AddEmbfile
-     pair: ufilename; Document.AddEmbfile
-     pair: desc; Document.AddEmbfile
+     pair: filename; Document.AddEmbeddedFile
+     pair: ufilename; Document.AddEmbeddedFile
+     pair: desc; Document.AddEmbeddedFile
 
-  .. method:: AddEmbfile(string name, byte[] buffer, string filename: null, string ufilename: null, string desc: null)
+  .. method:: AddEmbeddedFile(string name, byte[] buffer, string filename: null, string uFileName: null, string desc: null)
+              AddEmbfile(string name, byte[] buffer, string filename: null, string uFileName: null, string desc: null)
 
-    PDF only: Embed a new file. All string parameters except the name may be unicode (in previous versions, only ASCII worked correctly). File contents will be compressed (where beneficial).
+    PDF only: Embed a new file. All string parameters except the name may be unicode (in previous versions, only ASCII worked correctly). File contents will be compressed (where beneficial). ``AddEmbfile`` is the same method.
 
     :arg string name: entry identifier, **must not already exist**.
-    :arg byte[]: file contents.
+    :arg byte[] buffer: file contents.
 
     :arg string filename: optional filename. Documentation only, will be set to *name* if `null`.
-    :arg string ufilename: optional unicode filename. Documentation only, will be set to *filename* if `null`.
+    :arg string uFileName: optional unicode filename. Documentation only, will be set to *filename* if `null`.
     :arg string desc: optional description. Documentation only, will be set to *name* if `null`.
 
     :rtype: int
@@ -1561,9 +1607,9 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: GetEmbfile(int item)
 
-    PDF only: Retrieve the content of embedded file by its entry number or name. If the document is not a PDF, or entry cannot be found, an exception is raised.
+    PDF only: Retrieve the content of an embedded file by its entry number. If the document is not a PDF, or entry cannot be found, an exception is raised.
 
-    :arg int item: index or name of entry. An integer must be in `range(GetEmbfileCount())`.
+    :arg int item: 0-based index of the entry. Must be in ``0 .. GetEmbfileCount() - 1``.
 
     :rtype: byte[]
 
@@ -1575,11 +1621,11 @@ This class represents a document. It can be constructed from a file or from memo
 
     .. warning:: When specifying an entry name, this function will only **delete the first item** with that name. Be aware that PDFs not created with MuPDF.NET may contain duplicate names. So you may want to take appropriate precautions.
 
-  .. method:: GetEmbfileInfo(dynamic item)
+  .. method:: GetEmbfileInfo(object item)
 
     PDF only: Retrieve information of an embedded file given by its number or by its name.
 
-    :arg int/string item: index or name of entry. An integer must be in `Enumerable.Range(GetEmbfileCount())`.
+    :arg object item: index (``int``) or name (``string``) of the entry. An integer must be in ``0 .. GetEmbfileCount() - 1``.
 
     :rtype: EmbfileInfo
     :returns: `EmbfileInfo` with the following keys:
@@ -1602,19 +1648,23 @@ This class represents a document. It can be constructed from a file or from memo
     :rtype: list
 
   .. index::
-     pair: filename; Document.GetEmbfileUpd
-     pair: ufilename; Document.GetEmbfileUpd
-     pair: desc; Document.GetEmbfileUpd
+     pair: filename; Document.UpdateEmbeddedFile
+     pair: ufilename; Document.UpdateEmbeddedFile
+     pair: desc; Document.UpdateEmbeddedFile
 
-  .. method:: GetEmbfileUpd(dynamic item, byte[] buffer: null, string filename: null, string ufilename: null, string desc: null)
+  .. method:: UpdateEmbeddedFile(int idx, byte[] buffer: null, string filename: null, string uFileName: null, string desc: null)
+              UpdateEmbeddedFile(string name, byte[] buffer: null, string filename: null, string uFileName: null, string desc: null)
+              GetEmbfileUpd(object item, byte[] buffer: null, string filename: null, string uFileName: null, string desc: null)
 
-    PDF only: Change an embedded file given its entry number or name. All parameters are optional. Letting them default leads to a no-operation.
+    PDF only: Change an embedded file given its entry number or name. All parameters are optional. Letting them default leads to a no-operation. ``GetEmbfileUpd`` is the same method.
 
-    :arg int/string item: index or name of entry. An integer must be in `Enumerable.Range(GetEmbfileCount())`.
+    :arg int idx: 0-based index of the entry. Must be in ``0 .. GetEmbfileCount() - 1``.
+    :arg string name: name of the entry.
+    :arg object item: index (``int``) or name (``string``) of the entry when using ``GetEmbfileUpd``. An integer must be in ``0 .. GetEmbfileCount() - 1``.
     :arg byte[] buffer: the new file content.
 
     :arg string filename: the new filename.
-    :arg string ufilename: the new unicode filename.
+    :arg string uFileName: the new unicode filename.
     :arg string desc: the new description.
 
     :rtype: int
@@ -1641,7 +1691,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: Close()
 
-    Release objects and space allocations associated with the document. If created from a file, also closes *filename* (releasing control to the OS). Explicitly closing a document is equivalent to deleting it, `del doc`, or assigning it to something else like `doc = None`.
+    Release objects and space allocations associated with the document. If created from a file, also closes *filename* (releasing control to the OS). Prefer a ``using`` statement so the document is disposed automatically, or call this method when you are finished. Do not use the object after :meth:`Close`.
 
   .. method:: GetXrefObject(int xref, int compressed: 0, int ascii: 0)
 
@@ -1654,9 +1704,10 @@ This class represents a document. It can be constructed from a file or from memo
     :rtype: string
     :returns: The object definition source.
 
-  .. method:: GetPdfCatelog()
+  .. method:: GetPdfCatalog()
+              GetPdfCatelog()
 
-    PDF only: Return the :data:`xref` number of the PDF catalog (or root) object. Use that number with :meth:`Document.GetXrefObject` to see its source.
+    PDF only: Return the :data:`xref` number of the PDF catalog (or root) object. Use that number with :meth:`Document.GetXrefObject` to see its source. ``GetPdfCatelog`` is the same method.
 
 
   .. method:: GetPdfTrailer(int compressed: 0, int ascii: 0)
@@ -1718,7 +1769,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg string text: a string containing a valid PDF object definition.
 
     :arg page: a page object. If provided, indicates, that annotations of this page should be refreshed (reloaded) to reflect changes incurred with links and / or annotations.
-    :type page: :ref:`PdfPage`
+    :type page: ``PdfPage``
 
     :rtype: int
     :returns: zero if successful, otherwise an exception will be raised.
@@ -1765,66 +1816,67 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: Document.ExtractImage(int xref)
 
-    PDF Only: Extract data and meta information of an image stored in the document. The output can directly be used to be stored as an image file, as input for PIL, :ref:`Pixmap` creation, etc. This method avoids using pixmaps wherever possible to present the image in its original format (e.g. as JPEG).
+    PDF Only: Extract data and meta information of an image stored in the document. The output can be stored as an image file or used to create a :ref:`Pixmap`. This method avoids using pixmaps wherever possible to present the image in its original format (e.g. as JPEG).
 
-    :arg int xref: :data:`xref` of an image object. If this is not in `range(1, doc.GetXrefLength())`, or the object is no image or other errors occur, `null` is returned and no exception is raised.
+    :arg int xref: :data:`xref` of an image object. If this is not in ``1 .. doc.GetXrefLength() - 1``, or the object is no image or other errors occur, ``null`` is returned and no exception is raised.
 
-    :rtype: ImageInfo
-    :returns: a dictionary with the following keys
+    :rtype: :class:`ImageInfo`
+    :returns: an :class:`ImageInfo` with the following properties
 
-      * *Ext* (*string*) image type (e.g. *'jpeg'*), usable as image file extension
+      * *Ext* (*string*) image type (e.g. *"jpeg"*), usable as image file extension
       * *Smask* (*int*) :data:`xref` number of a stencil (/SMask) image or zero
-      * *Width* (*int*) image width
-      * *Height* (*int*) image height
-      * *ColorSpace* (*int*) the image's *colorspace.n* number.
-      * *CsNamee* (*string*) the image's *colorspace.name*.
-      * *Xres* (*int*) resolution in x direction. Please also see :data:`resolution`.
-      * *Yres* (*int*) resolution in y direction. Please also see :data:`resolution`.
+      * *Width* (*float*) image width
+      * *Height* (*float*) image height
+      * *ColorSpace* (*int*) the image's colorspace component count
+      * *CsName* (*string*) the image's colorspace name
+      * *Bpc* (*int*) bits per component
+      * *Xres* (*float*) resolution in x direction. Please also see :data:`resolution`.
+      * *Yres* (*float*) resolution in y direction. Please also see :data:`resolution`.
       * *Image* (*byte[]*) image data, usable as image file content
 
     .. code-block:: cs
 
-      ImageInfo d = doc.ExtractImage(1373)
-      Console.WriteLine(d)
-      {'ext': 'png', 'smask': 2934, 'width': 5, 'height': 629, 'colorspace': 3, 'xres': 96,
-      'yres': 96, 'cs-name': 'DeviceRGB',
-      'image': b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x05\ ...'}
+      ImageInfo d = doc.ExtractImage(1373);
+      Console.WriteLine(d.Ext);
+      Console.WriteLine(d.Width);
+      Console.WriteLine(d.Height);
+      Console.WriteLine(d.CsName);
+      Console.WriteLine(d.Image.Length);
 
-    .. note:: There is a functional overlap with *pix = new Pixmap(doc, xref)*, followed by a *pix.ToBytes()*. Main differences are that extract_image, **(1)** does not always deliver PNG image formats, **(2)** is **very** much faster with non-PNG images, **(3)** usually results in much less disk storage for extracted images, **(4)** returns `None` in error cases (generates no exception). Look at the following example images within the same PDF.
+    .. note:: There is a functional overlap with ``pix = new Pixmap(doc, xref)``, followed by ``pix.ToBytes()``. Main differences are that :meth:`Document.ExtractImage`, **(1)** does not always deliver PNG image formats, **(2)** is **very** much faster with non-PNG images, **(3)** usually results in much less disk storage for extracted images, **(4)** returns ``null`` in error cases (generates no exception). Look at the following example images within the same PDF.
 
        * `xref` 1186 is a JPEG -- :meth:`Document.ExtractImage` is **many times faster** and produces a **much smaller** output (2.48 MB vs. 0.35 MB)::
 
-          In [27]: %timeit pix =  new Pixmap(doc, 1186);pix.ToBytes()
-          341 ms ± 2.86 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
-          In [28]: len(pix.ToBytes())
-          Out[28]: 2599433
-
-          In [29]: %timeit img = doc.extract_image(1186)
-          15.7 µs ± 116 ns per loop (mean ± std. dev. of 7 runs, 100000 loops each)
-          In [30]: len(img["image"])
-          Out[30]: 371177
+          Pixmap pix = new Pixmap(doc, 1186);
+          byte[] png = pix.ToBytes();
+          ImageInfo img = doc.ExtractImage(1186);
+          Console.WriteLine(png.Length);       // 2599433
+          Console.WriteLine(img.Image.Length); // 371177
 
 
-  .. method:: Document.ExtractFont(int xref, int infoOnly: 0, string named: null)
+  .. method:: Document.ExtractFont(int xref)
+              Document.ExtractFont(int xref, int infoOnly: 0, string named: null)
 
     PDF Only: Return an embedded font file's data and appropriate file extension. This can be used to store the font as an external file. The method does not throw exceptions (other than via checking for PDF and valid :data:`xref`).
 
     :arg int xref: PDF object number of the font to extract.
-    :arg bool infoOnly: only return font information, not the buffer. To be used for information-only purposes, avoids allocation of large buffer areas.
-    :arg bool named: If true, a dictionary with the following keys is returned: 'name' (font base name), 'ext' (font file extension), 'type' (font type), 'content' (font file content).
+    :arg int infoOnly: when non-zero (three-argument form), return font information with an empty ``Content`` buffer.
+    :arg string named: unused in the three-argument form; kept for the ``FontInfo`` overload.
 
-    :rtype: FontInfo
-    :returns: a tuple `(basename, ext, type, content)`, where *ext* is a 3-byte suggested file extension (*string*), *basename* is the font's name (*string*), *type* is the font's type (e.g. "Type1") and *content* is a bytes object containing the font file's content (or *b""*). For possible extension values and their meaning see :ref:`FontExtensions`. Return details on error:
+    :rtype: (string, string, string, byte[])
+    :returns: ``(name, ext, type, content)``. *ext* is a suggested file extension, *name* is the font's name, *type* is the font's type (e.g. ``"Type1"``), and *content* is the font file bytes (or an empty array). The three-argument form returns a ``FontInfo`` with the same fields. For possible extension values see :ref:`FontExtensions`. Return details on error:
 
-          * `("", "", "", b"")` -- invalid `xref` or `xref` is not a (valid) font object.
-          * `(basename, "n/a", "Type1", b"")` -- *basename* is not embedded and thus cannot be extracted. This is the case for e.g. the :ref:`Base-14-Fonts` and Type 3 fonts.
+          * empty ``name``, ``ext``, ``type``, and empty ``content`` -- invalid ``xref`` or ``xref`` is not a (valid) font object.
+          * ``ext`` is ``"n/a"`` -- the font is not embedded and thus cannot be extracted. This is the case for e.g. the :ref:`Base-14 fonts <inbuilt_fonts>` and Type 3 fonts.
 
 
-    .. warning:: The basename is returned unchanged from the PDF. So it may contain characters (such as blanks) which may disqualify it as a filename for your operating system. Take appropriate action.
+    .. warning:: The name is returned unchanged from the PDF. So it may contain characters (such as blanks) which may disqualify it as a filename for your operating system. Take appropriate action.
 
     .. note::
-       * The returned *basename* in general is **not** the original file name, but it probably has some similarity.
-       * If parameter `named == true`, a dictionary with the following keys is returned: `{'name': 'T1', 'ext': 'n/a', 'type': 'Type3', 'content': b''}`.
+       * The returned *name* in general is **not** the original file name, but it probably has some similarity.
+       * Example::
+
+            var (name, ext, type, content) = doc.ExtractFont(xref);
 
 
   .. method:: XrefXmlMetaData()
@@ -1847,7 +1899,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Use this method immediately before saving the document.
 
-    The greatest benefit can be achieved when creating new PDFs using large fonts like is typical for Asian scripts. When using the :ref:`Story` class or method :meth:`Page.InsertHtmlbox`, multiple fonts may automatically be included -- without the programmer becoming aware of it.
+    The greatest benefit can be achieved when creating new PDFs using large fonts like is typical for Asian scripts. When using the :ref:`Story` class or method :meth:`Page.InsertHtmlBox`, multiple fonts may automatically be included -- without the programmer becoming aware of it.
     
     In all these cases, the set of actually used unicodes mostly is very small compared to the number of glyphs available in the used fonts. Using this method can easily reduce the embedded font binaries by two orders of magnitude -- from several megabytes down to a low two-digit kilobyte amount.
 
@@ -1963,23 +2015,23 @@ This class represents a document. It can be constructed from a file or from memo
 
     :type: bool
 
-  .. attribute:: IsPDF
+  .. attribute:: IsPdf
+                 IsPDF
 
-    *true* if this is a PDF document, else *false*.
+    *true* if this is a PDF document, else *false*. ``IsPDF`` is the same attribute.
 
     :type: bool
 
-  .. attribute:: IsFormPDF
+  .. attribute:: IsFormPdf
+                 IsFormPDF
 
-    *false* if this is not a PDF or has no form fields, otherwise the number of root form fields (fields with no ancestors).
+    ``IsFormPdf`` is *true* if this is a PDF with form fields, else *false*.
 
-    Returns the total number of (root) form fields.
-
-    :type: int
+    ``IsFormPDF`` is the legacy integer form: *-1* if not a PDF, otherwise the number of root form fields (0 if none).
 
   .. attribute:: IsReflowable
 
-    *true* if document has a variable page layout (like e-books or HTML). In this case you can set the desired page dimensions during document creation (open) or via method :meth:`Layout`.
+    *true* if document has a variable page layout (like e-books or HTML). In this case you can set the desired page dimensions during document creation (open) or via method :meth:`Document.SetLayout`.
 
     :type: bool
 
@@ -1997,7 +2049,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. attribute:: MarkInfo
 
-    A `Dictionary<string, bool>` indicating the `/MarkInfo` value. If not specified, the empty dictionary is returned. If not a PDF, `None` is returned.
+    A `Dictionary<string, bool>` indicating the `/MarkInfo` value. If not specified or not a PDF, the empty dictionary is returned.
 
     :type: Dictionary
 
@@ -2037,9 +2089,10 @@ This class represents a document. It can be constructed from a file or from memo
 
     :type: int
 
-  .. attribute:: MetaData
+  .. attribute:: Metadata
+                 MetaData
 
-    Contains the document's meta data as a dictionary or `null` (if *IsEncrypted=true* and *NeedPass=true*). Keys are *format*, *encryption*, *title*, *author*, *subject*, *keywords*, *creator*, *producer*, *creationDate*, *modDate*, *trapped*. All item values are strings or `null`.
+    Contains the document's meta data as a dictionary or `null` (if *IsEncrypted=true* and *NeedPass=true*). ``MetaData`` is the same attribute. Keys are *format*, *encryption*, *title*, *author*, *subject*, *keywords*, *creator*, *producer*, *creationDate*, *modDate*, *trapped*. All item values are strings or `null`.
 
     Except *format* and *encryption*, for PDF documents, the key names correspond in an obvious way to the PDF keys */Creator*, */Producer*, */CreationDate*, */ModDate*, */Title*, */Author*, */Subject*, */Trapped* and */Keywords* respectively.
 
@@ -2057,7 +2110,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :type: Dictionary<string, string>
 
-  .. Attribute:: Name
+  .. attribute:: Name
 
     Contains the *filename* or *filetype* value with which *Document* was created.
 
@@ -2087,7 +2140,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :type: List<string>
 
-.. NOTE:: For methods that change the structure of a PDF (:meth:`InsertPdf`, :meth:`Select`, :meth:`CopyPage`, :meth:`DeletePage` and others), be aware that objects or properties in your program may have been invalidated or orphaned. Examples are :ref:`Page` objects and their children (links, annotations, widgets), variables holding old page counts, tables of content and the like. Remember to keep such variables up to date or delete orphaned objects. Also refer to :ref:`ReferenialIntegrity`.
+.. NOTE:: For methods that change the structure of a PDF (:meth:`Document.InsertPdf`, :meth:`Document.Select`, :meth:`Document.CopyPage`, :meth:`Document.DeletePage` and others), be aware that objects or properties in your program may have been invalidated or orphaned. Examples are :ref:`Page` objects and their children (links, annotations, widgets), variables holding old page counts, tables of content and the like. Remember to keep such variables up to date or delete orphaned objects.
 
 
 Output structures
@@ -2210,7 +2263,7 @@ Other Examples
 
 .. [#f4] These parameters cause separate handling of stream categories: use it together with `expand` to restrict decompression to streams other than images / fontfiles.
 
-.. [#f5] Examples for "Form XObjects" are created by :meth:`Page.ShowPDFPage`.
+.. [#f5] Examples for "Form XObjects" are created by :meth:`Page.ShowPdfPage`.
 
 .. [#f6] For a *false* the **complete document** must be scanned. Both methods **do not load pages,** but only scan object definitions. This makes them at least 10 times faster than application-level loops (where total response time roughly equals the time for loading all pages). For the :ref:`AdobeManual` (756 pages) and the Pandas documentation (over 3070 pages) -- both have no annotations -- the method needs about 11 ms for the answer *false*. So response times will probably become significant only well beyond this order of magnitude.
 

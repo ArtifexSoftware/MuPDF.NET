@@ -46,7 +46,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
 
         Removes every filter from the pipeline.
 
-        :return: None
+        :rtype: void
 
     .. method:: RemoveAll(ImageProcessingFilterType type)
 
@@ -54,7 +54,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
 
         :param type: The filter type to remove from the pipeline.
         :type type: ImageProcessingFilterType
-        :return: None
+        :rtype: void
 
         .. note::
             Null filters are automatically excluded during the removal process.
@@ -70,7 +70,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
         :type options: IImageProcessingFilterOptions
         :param replaceExisting: If true, removes all existing filters of the same type before adding. Default is false.
         :type replaceExisting: bool
-        :return: None
+        :rtype: void
 
     .. method:: AddFilter(PreprocessingFilter filter, bool replaceExisting = false)
 
@@ -81,7 +81,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
         :param replaceExisting: If true, removes all existing filters of the same type before adding. Default is false.
         :type replaceExisting: bool
         :raises ArgumentNullException: Thrown when filter is null.
-        :return: None
+        :rtype: void
 
     .. method:: AddDeskew(double minAngle = DeskewFilterOptions.DEFAULT_TILT_CORRECTION_ANGLE_THRESHOLD, bool replaceExisting = true)
 
@@ -92,7 +92,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
         :param replaceExisting: If true, removes all existing deskew filters before adding. Default is true.
         :type replaceExisting: bool
         :raises ArgumentOutOfRangeException: Thrown when minAngle is negative.
-        :return: None
+        :rtype: void
 
     .. method:: AddDilation(bool replaceExisting = false)
 
@@ -100,7 +100,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
 
         :param replaceExisting: If true, removes all existing dilation filters before adding. Default is false.
         :type replaceExisting: bool
-        :return: None
+        :rtype: void
 
     .. method:: AddRemoveVerticalLines(bool replaceExisting = true)
 
@@ -108,7 +108,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
 
         :param replaceExisting: If true, removes all existing remove vertical lines filters before adding. Default is true.
         :type replaceExisting: bool
-        :return: None
+        :rtype: void
 
     .. method:: AddRemoveHoriziontalLines(bool replaceExisting = true)
 
@@ -116,7 +116,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
 
         :param replaceExisting: If true, removes all existing remove horizontal lines filters before adding. Default is true.
         :type replaceExisting: bool
-        :return: None
+        :rtype: void
 
     .. method:: AddMedian(int blockSize, bool replaceExisting = false)
 
@@ -127,7 +127,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
         :param replaceExisting: If true, removes all existing median filters before adding. Default is false.
         :type replaceExisting: bool
         :raises ArgumentOutOfRangeException: Thrown when blockSize is not positive.
-        :return: None
+        :rtype: void
 
     .. method:: AddGamma(double gamma, bool replaceExisting = true)
 
@@ -138,7 +138,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
         :param replaceExisting: If true, removes all existing gamma filters before adding. Default is true.
         :type replaceExisting: bool
         :raises ArgumentOutOfRangeException: Thrown when gamma is not greater than zero.
-        :return: None
+        :rtype: void
 
     .. method:: AddContrast(int contrast, bool replaceExisting = true)
 
@@ -148,7 +148,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
         :type contrast: int
         :param replaceExisting: If true, removes all existing contrast filters before adding. Default is true.
         :type replaceExisting: bool
-        :return: None
+        :rtype: void
 
     .. method:: AddGrayscale(bool replaceExisting = true)
 
@@ -156,7 +156,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
 
         :param replaceExisting: If true, removes all existing grayscale filters before adding. Default is true.
         :type replaceExisting: bool
-        :return: None
+        :rtype: void
 
     .. method:: AddInvert(bool replaceExisting = true)
 
@@ -164,7 +164,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
 
         :param replaceExisting: If true, removes all existing invert filters before adding. Default is true.
         :type replaceExisting: bool
-        :return: None
+        :rtype: void
 
     .. method:: AddScale(double scaleFactor, SKFilterQuality quality = SKFilterQuality.High, bool replaceExisting = false)
 
@@ -177,7 +177,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
         :param replaceExisting: If true, removes all existing scale filters before adding. Default is false.
         :type replaceExisting: bool
         :raises ArgumentOutOfRangeException: Thrown when scaleFactor is not greater than zero.
-        :return: None
+        :rtype: void
 
 
 
@@ -192,7 +192,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
         :param replaceExisting: If true, removes all existing fit filters before adding. Default is true.
         :type replaceExisting: bool
         :raises ArgumentOutOfRangeException: Thrown when maxDimension is not greater than zero.
-        :return: None
+        :rtype: void
 
         .. note::
             The image will be scaled to fit within a square of maxDimension * maxDimension pixels while maintaining aspect ratio.  
@@ -203,7 +203,7 @@ The `ImageFilterPipeline` class provide a Helper that lets callers compose and r
 
         :param image: The image to process. Will be replaced with the processed image.
         :type image: SKBitmap
-        :return: None (modifies image in place via ref parameter)
+        :rtype: void
 
         .. note::
             Filters are applied sequentially in the order they were added to the pipeline.                      

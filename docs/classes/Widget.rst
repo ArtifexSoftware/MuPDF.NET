@@ -13,7 +13,7 @@ This class represents a PDF Form field, also called a "widget". Throughout this 
 
 Like annotations, widgets live on PDF pages. Similar to annotations, the first widget on a page is accessible via :attr:`Page.FirstWidget` and subsequent widgets can be accessed via the :attr:`Widget.Next` property.
 
-MuPDF no longer treats widgets as a subset of general annotations. Consequently, :attr:`Page.FirstAnnot` and :meth:`Annot.Next` will deliver **non-widget annotations exclusively**, and be *None* if only form fields exist on a page. Vice versa, :attr:`Page.FirstWidget` and :meth:`Widget.Next` will only show widgets. This design decision is purely internal to MuPDF; technically, links, annotations and fields have a lot in common and also continue to share the better part of their code within MuPDF.
+MuPDF no longer treats widgets as a subset of general annotations. Consequently, :attr:`Page.FirstAnnot` and :meth:`Annot.Next` will deliver **non-widget annotations exclusively**, and be ``null`` if only form fields exist on a page. Vice versa, :attr:`Page.FirstWidget` and :meth:`Widget.Next` will only show widgets. This design decision is purely internal to MuPDF; technically, links, annotations and fields have a lot in common and also continue to share the better part of their code within MuPDF.
 
 
 **Class API**
@@ -26,28 +26,32 @@ MuPDF no longer treats widgets as a subset of general annotations. Consequently,
 
        This method helps finding out the possible values of :attr:`FieldValue` in these cases.
 
-       :returns: a dictionary with the names of 'On' and 'Off' for the *normal* and the *pressed-down* appearance of button widgets. The following example shows that the "selected" value is "Male":
+       :returns: ``Dictionary<string, List<string>>`` with keys ``"normal"`` and ``"down"`` for the *normal* and the *pressed-down* appearance of button widgets. The following example shows that the "selected" value is "Male":
 
-         Console.WriteLine(field.FieldName, field.ButtonStates())
-         Gender Second person {'down': ['Male', 'Off'], 'normal': ['Male', 'Off']}
+      .. code-block:: cs
+
+         Console.WriteLine($"{field.FieldName} {field.ButtonStates()}");
+         // Gender, down: Male, Off; normal: Male, Off
 
 
     .. method:: OnState
 
        Return the value of the "ON" state of check boxes and radio buttons. For check boxes this is always the value "Yes". For radio buttons, this is the value to select / activate the button.
 
-       :returns: the value that sets the button to "selected". For non-checkbox, non-radiobutton fields, always `None` is returned. For check boxes the return is `true`. For radio buttons this is the value "Male" in the following example:
+       :returns: the string that sets the button to "selected". For non-checkbox, non-radiobutton fields, ``null`` is returned. For check boxes the return is typically ``"Yes"``. For radio buttons this is the on-state name, for example ``"Male"``:
 
-         >>> Console.WriteLine(field., field.ButtonStates())
-         Gender Second person {'down': ['Male', 'Off'], 'normal': ['Male', 'Off']}
-         >>> Console.WriteLine(field.OnState())
-         Male
+      .. code-block:: cs
 
-        So for check boxes and radio buttons, the recommended method to set them to "selected", or to check the state is the following:
-        
-         >>> field.FieldValue = field.OnState()
-         >>> field.FieldValue == field.OnState()
-         true
+         Console.WriteLine(field.OnState());
+         // Male
+
+      So for check boxes and radio buttons, the recommended method to set them to "selected", or to check the state is the following:
+
+      .. code-block:: cs
+
+         field.FieldValue = field.OnState();
+         Console.WriteLine(field.FieldValue == field.OnState());
+         // true
 
 
     .. method:: Update
@@ -60,11 +64,11 @@ MuPDF no longer treats widgets as a subset of general annotations. Consequently,
 
     .. attribute:: Next
 
-       Point to the next form field on the page. The last widget returns *None*.
+       Point to the next form field on the page. The last widget returns ``null``.
 
     .. attribute:: BorderColor
 
-       A list of up to 4 floats defining the field's border color. Default value is *None* which causes border style and border width to be ignored.
+       A list of up to 4 floats defining the field's border color. Default value is ``null`` which causes border style and border width to be ignored.
 
     .. attribute:: BorderStyle
 
@@ -116,7 +120,7 @@ MuPDF no longer treats widgets as a subset of general annotations. Consequently,
 
     .. attribute:: IsSigned
 
-       A bool indicating the signing status of a signature field, else *None*.
+       A bool indicating the signing status of a signature field. ``false`` if this is not a signature field or it is not signed.
 
     .. attribute:: Rect
 
@@ -146,40 +150,40 @@ MuPDF no longer treats widgets as a subset of general annotations. Consequently,
 
     .. attribute:: Script
        
-       JavaScript text (unicode) for an action associated with the widget, or *None*. This is the only script action supported for **button type** widgets.
+       JavaScript text (unicode) for an action associated with the widget, or ``null``. This is the only script action supported for **button type** widgets.
 
     .. attribute:: ScriptStroke
        
-       JavaScript text (unicode) to be performed when the user types a key-stroke into a text field or combo box or modifies the selection in a scrollable list box. This action can check the keystroke for validity and reject or modify it. *None* if not present.
+       JavaScript text (unicode) to be performed when the user types a key-stroke into a text field or combo box or modifies the selection in a scrollable list box. This action can check the keystroke for validity and reject or modify it. ``null`` if not present.
 
     .. attribute:: ScriptFormat
        
-       JavaScript text (unicode) to be performed before the field is formatted to display its current value. This action can modify the field's value before formatting. *None* if not present.
+       JavaScript text (unicode) to be performed before the field is formatted to display its current value. This action can modify the field's value before formatting. ``null`` if not present.
 
     .. attribute:: ScriptChange
 
-       JavaScript text (unicode) to be performed when the field's value is changed. This action can check the new value for validity. *None* if not present.
+       JavaScript text (unicode) to be performed when the field's value is changed. This action can check the new value for validity. ``null`` if not present.
 
     .. attribute:: ScriptCalc
 
-       JavaScript text (unicode) to be performed to recalculate the value of this field when that of another field changes. *None* if not present.
+       JavaScript text (unicode) to be performed to recalculate the value of this field when that of another field changes. ``null`` if not present.
 
     .. attribute:: ScriptBlur
        
-       JavaScript text (unicode) to be performed on losing the focus of this field. *None* if not present.
+       JavaScript text (unicode) to be performed on losing the focus of this field. ``null`` if not present.
 
     .. attribute:: ScriptFocus
        
-       JavaScript text (unicode) to be performed on focusing this field. *None* if not present.
+       JavaScript text (unicode) to be performed on focusing this field. ``null`` if not present.
 
     .. note::
 
        1. For **adding** or **changing** one of the above scripts,
          just put the appropriate JavaScript source code in the widget attribute.
-         To **remove** a script, set the respective attribute to *None*.
+         To **remove** a script, set the respective attribute to ``null``.
 
        2. Button fields only support :attr:`Script`.
-         Other script entries will automatically be set to *None*.
+         Other script entries will automatically be set to ``null``.
 
        3. It is worthwhile to look at
           `this <https://experienceleague.adobe.com/docs/experience-manager-learn/assets/FormsAPIReference.pdf?lang=en>`_
@@ -223,13 +227,13 @@ Supported Widget Types
 -----------------------
 MuPDF.NET supports the creation and update of many, but not all widget types.
 
-* text (`PDF_WIDGET_TYPE_TEXT`)
-* push button (`PDF_WIDGET_TYPE_BUTTON`)
-* check box (`PDF_WIDGET_TYPE_CHECKBOX`)
-* combo box (`PDF_WIDGET_TYPE_COMBOBOX`)
-* list box (`PDF_WIDGET_TYPE_LISTBOX`)
-* radio button (`PDF_WIDGET_TYPE_RADIOBUTTON`): MuPDF.NET does not currently support the **creation** of groups of (interconnected) radio buttons, where setting one automatically unsets the other buttons in the group. The widget object also does not reflect the presence of a button group. However: consistently selecting (or unselecting) a radio button is supported. This includes correctly setting the value maintained in the owning button group. Selecting a radio button may be done by either assigning `true` or `field.OnState()` to the field value. **De-selecting** the button should be done assigning `false`.
-* signature (`PDF_WIDGET_TYPE_SIGNATURE`) **read only**.
+* text (:ref:`PDF_WIDGET_TYPE_TEXT <WidgetTypes>`)
+* push button (:ref:`PDF_WIDGET_TYPE_BUTTON <WidgetTypes>`)
+* check box (:ref:`PDF_WIDGET_TYPE_CHECKBOX <WidgetTypes>`)
+* combo box (:ref:`PDF_WIDGET_TYPE_COMBOBOX <WidgetTypes>`)
+* list box (:ref:`PDF_WIDGET_TYPE_LISTBOX <WidgetTypes>`)
+* radio button (:ref:`PDF_WIDGET_TYPE_RADIOBUTTON <WidgetTypes>`): MuPDF.NET does not currently support the **creation** of groups of (interconnected) radio buttons, where setting one automatically unsets the other buttons in the group. The widget object also does not reflect the presence of a button group. However: consistently selecting (or unselecting) a radio button is supported. This includes correctly setting the value maintained in the owning button group. Selecting a radio button may be done by either assigning ``true`` or :meth:`Widget.OnState` to the field value. **De-selecting** the button should be done assigning `false`.
+* signature (:ref:`PDF_WIDGET_TYPE_SIGNATURE <WidgetTypes>`) **read only**.
 
 .. rubric:: Footnotes
 

@@ -55,7 +55,7 @@ For a description of what this class is all about, see Appendix 2.
 
       This is a high-speed method with just enough information to output plain text in desired reading sequence.
 
-      :rtype: list of TextBlock
+      :rtype: list of :class:`TextBlock`
 
    .. method:: ExtractWords(char[] delimiters: null)
 
@@ -67,11 +67,11 @@ For a description of what this class is all about, see Appendix 2.
 
       This is a high-speed method which e.g. allows extracting text from within given areas or recovering the text reading sequence.
 
-      :rtype: list of WordBlock
+      :rtype: list of :class:`WordBlock`
 
    .. method:: ExtractHtml
 
-      Textpage content as a string in HTML format. This version contains complete formatting and positioning information. Images are included (encoded as base64 strings). You need an HTML package to interpret the output. Your internet browser should be able to adequately display this information, but see :ref:`HTMLQuality`.
+      Textpage content as a string in HTML format. This version contains complete formatting and positioning information. Images are included (encoded as base64 strings). You need an HTML package to interpret the output. Your internet browser should be able to adequately display this information.
 
       :rtype: str
 
@@ -85,7 +85,7 @@ For a description of what this class is all about, see Appendix 2.
 
    .. method:: ExtractJSON(bool sort: false)
 
-      Textpage content as a JSON string. Created by `JsonConvert.SerializeObject(TextPage.ExtractDict())`. It is included for backlevel compatibility. You will probably use this method ever only for outputting the result to some file. The  method detects binary image data and converts them to base64 encoded strings.
+      Textpage content as a JSON string. Created by ``JsonConvert.SerializeObject`` of :meth:`TextPage.ExtractDict`. It is included for backlevel compatibility. You will probably use this method ever only for outputting the result to some file. The  method detects binary image data and converts them to base64 encoded strings.
 
       :arg bool sort: Sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order.
 
@@ -93,7 +93,7 @@ For a description of what this class is all about, see Appendix 2.
 
    .. method:: ExtractXHtml
 
-      Textpage content as a string in XHTML format. Text information detail is comparable with :meth:`ExtractTEXT`, but also contains images (base64 encoded). This method makes no attempt to re-create the original visual appearance.
+      Textpage content as a string in XHTML format. Text information detail is comparable with :meth:`TextPage.ExtractText`, but also contains images (base64 encoded). This method makes no attempt to re-create the original visual appearance.
 
       :rtype: string
 
@@ -105,7 +105,7 @@ For a description of what this class is all about, see Appendix 2.
 
    .. method:: ExtractRAWDict(bool sort: false)
 
-      Textpage content as a dictionary -- technically similar to :meth:`ExtractDict`, and it contains that information as a subset (including any images). It provides additional detail down to each character, which makes using XML obsolete in many cases. See below for the structure.
+      Textpage content as a dictionary -- technically similar to :meth:`TextPage.ExtractDict`, and it contains that information as a subset (including any images). It provides additional detail down to each character, which makes using XML obsolete in many cases. See below for the structure.
 
       :arg bool sort: Sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order.
 
@@ -113,7 +113,7 @@ For a description of what this class is all about, see Appendix 2.
 
    .. method:: ExtractRawJSON(bool sort: false)
 
-      Textpage content as a JSON string. Created by `JsonConvert.SerializeObject(TextPage.ExtractRAWDict())`. You will probably use this method ever only for outputting the result to some file. The  method detects binary image data and converts them to base64 encoded strings.
+      Textpage content as a JSON string. Created by ``JsonConvert.SerializeObject`` of :meth:`TextPage.ExtractRAWDict`. You will probably use this method ever only for outputting the result to some file. The  method detects binary image data and converts them to base64 encoded strings.
 
       :arg bool sort: Sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order.
 
@@ -132,7 +132,7 @@ For a description of what this class is all about, see Appendix 2.
       .. note:: **Overview of changes in v1.18.2:**
 
         1. The `hitMax` parameter has been removed: all hits are always returned.
-        2. The `rect` parameter of the :ref:`TextPage` is now respected: only text inside this area is examined. Only characters with fully contained bboxes are considered. The wrapper method :meth:`Page.search_for` correspondingly supports a *clip* parameter.
+        2. The `rect` parameter of the :ref:`TextPage` is now respected: only text inside this area is examined. Only characters with fully contained bboxes are considered. The wrapper method :meth:`Page.SearchFor` correspondingly supports a *clip* parameter.
         3. **Hyphenated words** are now found.
         4. **Overlapping rectangles** in the same line are now automatically joined. We assume that such separations are an artifact created by multiple marked content groups, containing parts of the same search needle.
 
@@ -222,7 +222,7 @@ Possible values of the "ext" key are "bmp", "gif", "jpeg", "jpx" (JPEG 2000), "j
 
    2. :ref:`TextPage` and corresponding method :meth:`Page.GetText` are **available for all document types**. Only for PDF documents, methods :meth:`Document.GetPageImages` / :meth:`Page.GetImages` offer some overlapping functionality as far as image lists are concerned. But both lists **may or may not** contain the same items. Any differences are most probably caused by one of the following:
 
-   3. The image's "transformation matrix" is defined as the matrix, for which the expression `bbox / transform == Rect(0, 0, 1, 1)` is true, lookup details here: :ref:`ImageTransformation`.
+   3. The image's "transformation matrix" is defined as the matrix, for which the expression `bbox / transform == Rect(0, 0, 1, 1)` is true.
 
 
 **Text Block:**
@@ -269,8 +269,8 @@ Desc            descender of the font *(float)*
 Size            font size *(float)*
 Flags           font characteristics *(int)*
 Color           text color in sRGB format *(int)*
-Text            (only for :meth:`ExtractDict`) text *(string)*
-Chars           (only for :meth:`ExtractRAWDict`) *list* of character dictionaries
+Text            (only for :meth:`TextPage.ExtractDict`) text *(string)*
+Chars           (only for :meth:`TextPage.ExtractRAWDict`) *list* of character dictionaries
 =============== =====================================================================
 
 
@@ -303,8 +303,8 @@ The following shows the original span rectangle in red and the rectangle with re
 
 Bits 1 thru 4 are font properties, i.e. encoded in the font program. Please note, that this information is not necessarily correct or complete: fonts quite often contain wrong data here.
 
-Character Structure for :meth:`ExtractRAWDict`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Character Structure for :meth:`TextPage.ExtractRAWDict`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 =============== ===========================================================
 **Key**             **Value**
@@ -316,13 +316,13 @@ C               the character (unicode)
 
 This image shows the relationship between a character's bbox and its quad: |textpagechar|
 
-.. |textpagechar| image:: images/img-textpage-char.*
+.. |textpagechar| image:: ../images/img-textpage-char.png
    :align: top
    :scale: 66
 
 .. rubric:: Footnotes
 
-.. [#f1] Image specifications for a PDF page are done in a page's (sub-) :data:`dictionary`, called `/Resources`. Resource dictionaries can be **inherited** from any of the page's parent objects (usually the :data:`catalog` -- the top-level parent). The PDF creator may e.g. define one `/Resources` on file level, naming all images and / or all fonts ever used by any page. In these cases, :meth:`Page.GetImages` and :meth:`Page.get_fonts` will consequently return the same lists for all pages. If desired, this situation can be reverted using :meth:`Page.clean_contents`. After execution, the page's object definition will show fonts and images that are actually used.
+.. [#f1] Image specifications for a PDF page are done in a page's (sub-) :data:`dictionary`, called `/Resources`. Resource dictionaries can be **inherited** from any of the page's parent objects (usually the :data:`catalog` -- the top-level parent). The PDF creator may e.g. define one `/Resources` on file level, naming all images and / or all fonts ever used by any page. In these cases, :meth:`Page.GetImages` and :meth:`Page.GetFonts` will consequently return the same lists for all pages. If desired, this situation can be reverted using :meth:`Page.CleanContents`. After execution, the page's object definition will show fonts and images that are actually used.
 
 .. [#f2] The coordinate systems of MuPDF and PDF are different in that MuPDF uses the page's top-left point as `(0, 0)`. In PDF, this is the bottom-left point. Therefore, the positive direction for MuPDF's y-axis is **from top to bottom**. This causes the sign change for the sine value here: a **negative** value indicates anti-clockwise rotation of the text.
 

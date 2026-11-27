@@ -19,8 +19,8 @@ Story
 :attr:`Story.Body`                          The story's underlying :htmlTag:`Body`
 :meth:`Story.Write`                         Places and draws Story to a DocumentWriter
 :meth:`Story.WriteStabilized`               Iterative layout of html content to a DocumentWriter
-:meth:`Story.WriteWithLinks`                Like `Write()` but also creates PDF links
-:meth:`Story.WriteStabilizedWithLinks`      Like `WriteStabilized()` but also creates PDF links
+:meth:`Story.WriteWithLinks`                Like :meth:`Story.Write` but also creates PDF links
+:meth:`Story.WriteStabilizedWithLinks`      Like :meth:`Story.WriteStabilized` but also creates PDF links
 :meth:`Story.Fit`                           Finds optimal rect that contains the story `this`
 :meth:`Story.FitScale`                      
 :meth:`Story.FitHeight`
@@ -54,9 +54,9 @@ Story
         the story is ready to be laid out and to be fed to a series of devices
         (typically devices provided by a :ref:`DocumentWriter` to produce new pages).
       * The next step is to place the story and write it out.
-        This can either be done directly, by looping around calling `Place()` and `Draw()`,
+        This can either be done directly, by looping around calling :meth:`Story.Place` and :meth:`Story.Draw`,
         or alternatively,
-        the looping can handled for you using the `Write()` or `WriteStabilized()` methods.
+        the looping can handled for you using the :meth:`Story.Write` or :meth:`Story.WriteStabilized` methods.
         Which method you choose is largely a matter of taste.
         
         * To work in the first of these styles, the following loop should be used:
@@ -74,21 +74,21 @@ Story
              until the caller is happy with the results. 
           4. Optionally, at this point,
              we can request details of where interesting items have been placed,
-             by calling the `ElementPositions()` method.
-             Items are deemed to be interesting if their integer `heading` attribute is a non-zero
+             by calling :meth:`Story.ElementPositions`.
+             Items are deemed to be interesting if their integer :attr:`Position.Heading` attribute is a non-zero
              (corresponding to HTML tags :htmlTag:`h1` - :htmlTag:`h6`),
-             if their `id` attribute is not `null` (corresponding to HTML tag :htmlTag:`id`),
-             or if their `href` attribute is not `null` (responding to HTML tag :htmlTag:`href`).
+             if their ``id`` attribute is not `null` (corresponding to HTML tag :htmlTag:`id`),
+             or if their ``href`` attribute is not `null` (responding to HTML tag :htmlTag:`href`).
              This can conveniently be used for automatic generation of a Table of Contents,
              an index of images or the like.
-          5. Next, draw that rectangle out to the device with the `Draw()` method.
-          6. If the most recent call to `Place()` indicated that all the story data had fitted,
+          5. Next, draw that rectangle out to the device with the :meth:`Story.Draw` method.
+          6. If the most recent call to :meth:`Story.Place` indicated that all the story data had fitted,
              stop now.
           7. Otherwise, we can loop back.
              If there are more rectangles to be placed on the current device (page),
              we jump back to step 3 - if not, we jump back to step 1 to get a new device.
         * Alternatively, in the case where you are using a :ref:`DocumentWriter`,
-          the `Write()` or `WriteStabilized()` methods can be used.
+          the :meth:`Story.Write` or :meth:`Story.WriteStabilized` methods can be used.
           These handle all the looping for you,
           in exchange for being provided with callbacks that control the behaviour
           (notably a callback that enumerates the rectangles/pages to use).
@@ -114,7 +114,7 @@ Story
 
       Calculate that part of the story's content, that will fit in the provided rectangle. The method maintains a pointer which part of the story's content has already been written and upon the next invocation resumes from that pointer's position.
 
-      :arg Rect where: layout the current part of the content to fit into this rectangle. This must be a sub-rectangle of the page's :ref:`MediaBox<Glossary_MediaBox>`.
+      :arg Rect where: layout the current part of the content to fit into this rectangle. This must be a sub-rectangle of the page's :attr:`Page.MediaBox`.
 
       :rtype: Tuple(bool, Rect)
       :returns: a bool (int) `more` and a rectangle `filled`. If `more == 0`, all content of the story has been written, otherwise more is waiting to be written to subsequent rectangles / pages. Rectangle `filled` is the part of `where` that has actually been filled.
@@ -123,21 +123,19 @@ Story
 
       Write the content part prepared by :meth:`Story.Place` to the page.
 
-      :arg dev: the :ref:`Device` created by `dev = writer.BeginPage(Rect mediabox)`. The device knows how to call all MuPDF functions needed to write the content.
+      :arg dev: the :class:`DeviceWrapper` created by ``dev = writer.BeginPage(Rect mediabox)``. The device knows how to call all MuPDF functions needed to write the content.
       :arg Matrix matrix: a matrix for transforming content when writing to the page. An example may be writing rotated text. The default means no transformation (i.e. the :ref:`Identity` matrix).
 
    .. method:: ElementPositions(Action<Position> function, Position arg: null)
+               ElementPositions(Action<StoryElementPositionInfo> function, Dictionary<string, object> args: null)
 
       Let the Story provide positioning information about certain HTML elements once their place on the current page has been computed - i.e. invoke this method **directly after** :meth:`Story.Place`.
 
       `Story` will pass position information to `function`. This information can for example be used to generate a Table of Contents.
 
-      :arg callable function: a function accepting an :class:`ElementPosition` object. It will be invoked by the Story object to process positioning information. The function **must** be a callable accepting exactly one argument.
-      :arg Position args: an optional dictionary with any **additional** information
-        that should be added to the :class:`ElementPosition` instance passed to `function`.
-        Like for example the current output page number.
-        Every key in this dictionary must be a string that conforms to the rules for a valid dictionary identifier.
-        The complete set of information is explained below.
+      :arg function: an ``Action<Position>`` that receives a :class:`Position`, or the second overload ``Action<StoryElementPositionInfo>`` that receives a :class:`StoryElementPositionInfo`.
+      :arg Position arg: an optional :class:`Position` whose fields (for example :attr:`Position.PageNum`) are copied onto each record passed to ``function``.
+      :arg Dictionary<string, object> args: optional extra fields merged onto each record for the second overload. Keys must be valid C# identifiers. The complete set of information is explained below.
 
 
    .. method:: Reset()
@@ -151,13 +149,13 @@ Story
    .. method:: Write(DocumentWriter writer, RectFunction rectfn, Action<Position> positionfn: null, Action<int, Rect, DeviceWrapper, bool> pagefn: null)
 
         Places and draws Story to a `DocumentWriter`. Avoids the need for
-        calling code to implement a loop that calls `Story.Place()` and
-        `Story.Draw()` etc, at the expense of having to provide at least the
-        `rectfn()` callback.
+        calling code to implement a loop that calls :meth:`Story.Place` and
+        :meth:`Story.Draw` etc, at the expense of having to provide at least the
+        ``rectfn`` callback.
        
         :arg writer: a `DocumentWriter` or null.
-        :arg rectfn: a callable taking `(rectN: int, filled: Rect)` and
-            returning `(mediabox, rect, ctm)`:
+        :arg rectfn: a callable taking ``(rectN: int, filled: Rect)`` and
+            returning ``(mediabox, rect, ctm)``:
             
             * mediabox: null or rect for new page.
             * rect: The next rect into which content should be placed.
@@ -165,14 +163,14 @@ Story
         :arg positionfn: null, or a callable taking `Action<Position>`:
             
             * position:
-                An `ElementPosition` with an extra `.page_num` member.
-            Typically called multiple times as we generate elements that
-            are headings or have an id.
+                A :class:`Position` with :attr:`Position.PageNum` set.
+                Typically called multiple times as we generate elements that
+                are headings or have an id.
         :arg pagefn:
-            null, or a callable taking `Action<int, Rect, DeviceWrapper, bool>`;
+            ``Action<int, Rect, DeviceWrapper, bool>`` or ``null``;
             called at start (`after=0`) and end (`after=1`) of each page.
 
-   .. staticmethod:: WriteStabilized(DocumentWriter writer, ContentFunction contentfn, RectFunction rectfn, string userCss: null, int em: 12, Action<Position> positionfn: null, Action<int, Rect, DeviceWrapper, bool> pagefn: null, Archive archive: null, bool addHeaderIds: true)
+   .. staticmethod:: WriteStabilized(DocumentWriter writer, ContentFunction contentfn, RectFunction rectfn, string userCss: null, float em: 12, Action<Position> positionfn: null, Action<int, Rect, DeviceWrapper, bool> pagefn: null, Archive archive: null, bool addHeaderIds: true)
    
         Static method that does iterative layout of html content to a
         `DocumentWriter`.
@@ -180,67 +178,65 @@ Story
         For example this allows one to add a table of contents section
         while ensuring that page numbers are patched up until stable.
 
-        Repeatedly creates a new `Story` from `(contentfn(),
-        userCss, em, archive)` and lays it out with internal call
-        to `Story.Write()`; uses a null writer and extracts the list
-        of `ElementPosition`'s which is passed to the next call of
-        `contentfn()`.
+        Repeatedly creates a new `Story` from ``contentfn()``, ``userCss``,
+        ``em``, and ``archive`` and lays it out with an internal call
+        to :meth:`Story.Write`; uses a null writer and extracts the list
+        of :class:`Position` objects which is passed to the next call of
+        ``contentfn``.
 
-        When the html from `contentfn()` becomes unchanged, we do a
+        When the html from ``contentfn`` becomes unchanged, we do a
         final iteration using `writer`.
 
         :arg writer:
             A `DocumentWriter`.
         :arg contentfn:
-            A function taking a list of `ElementPositions` and
+            A function taking a list of :class:`Position` objects and
             returning a string containing html. The returned html
             can depend on the list of positions, for example with a
             table of contents near the start.
         :arg rectfn:
-            A callable taking `(int rectN, Rect filled)` and
-            returning `(Rect mediabox, Rect rect, Matrix ctm)`:
+            A callable taking ``(int rectN, Rect filled)`` and
+            returning ``(Rect mediabox, Rect rect, Matrix ctm)``:
 
             * mediabox: null or rect for new page.
             * rect: The next rect into which content should be placed.
             * ctm: A `Matrix`.
         :arg pagefn:
-            null, or a callable taking `(int pageN, Rect medibox,
-            DeviceWrapper dev, bool after)`; called at start (`after=0`) and end
-            (`after=1`) of each page.
+            ``Action<int, Rect, DeviceWrapper, bool>`` or ``null``;
+            called at start (`after=0`) and end (`after=1`) of each page.
         :arg archive:
         :arg addHeaderIds:
             If true, we add unique ids to all header tags that
             don't already have an id. This can help automatic
             generation of tables of contents.
-        Returns:
-            null.
+        :rtype: void
        
-   .. method:: WriteWithLinks(RectFunction rectfn, Action<Position> positionFn: null, Action<int, Rect, DeviceWrapper, bool> pageFn: null)
+   .. method:: WriteWithLinks(RectFunction rectfn, Action<Position> positionfn: null, Action<int, Rect, DeviceWrapper, bool> pagefn: null)
 
-        Similar to `Write()` except that we don't have a `writer` arg
+        Similar to :meth:`Story.Write` except that we don't have a `writer` arg
         and we return a PDF `Document` in which links have been created
         for each internal html link.
 
-   .. staticmethod:: WriteStabilizedWithLinks(ContentFunction contentfn, RectFunction rectfn, string userCss: null, int em=12, Action<Position> positionFn: null, Action<int, Rect, DeviceWrapper, bool> pageFn=null, Archive archive=null, bool addHeaderIds: true)
+   .. staticmethod:: WriteStabilizedWithLinks(ContentFunction contentfn, RectFunction rectfn, string userCss: null, float em: 12, Action<Position> positionfn: null, Action<int, Rect, DeviceWrapper, bool> pagefn: null, Archive archive: null, bool addHeaderIds: true)
 
-        Similar to `WriteStabilized()` except that we don't have a `writer`
+        Similar to :meth:`Story.WriteStabilized` except that we don't have a `writer`
         arg and instead return a PDF `Document` in which links have been
         created for each internal html link.
     
    .. class:: Story.FitResult
     
-        The result from a `Story.Fit*()` method.
+        The result from :meth:`Story.Fit`, :meth:`Story.FitScale`, :meth:`Story.FitHeight`, or :meth:`Story.FitWidth`.
         
         Members:
         
         `BigEnough`:
             `true` if the fit succeeded.
         `Filled`:
-            From the last call to `Story.Place()`.
+            From the last call to :meth:`Story.Place`.
         `More`:
             `false` if the fit succeeded.
         `NumCalls`:
-            Number of calls made to `self.Place()`.
+            Number of calls made to :meth:`Story.Place`.
         `Parameter`:
             The successful parameter value, or the largest failing value.
         `Rect`:
@@ -252,15 +248,15 @@ Story
         
         Returns a `Story.FitResult` instance.
             
-        On success, the last call to `self.Place()` will have been with the
-        returned rectangle, so `self.Draw()` can be used directly.
+        On success, the last call to :meth:`Story.Place` will have been with the
+        returned rectangle, so :meth:`Story.Draw` can be used directly.
         
         :arg fn:
             A callable taking a floating point `parameter` and returning a
             `Rect()`. If the rect is empty, we assume the story will
-            not fit and do not call `self.Place()`.
+            not fit and do not call :meth:`Story.Place`.
 
-            Must guarantee that `self.Place()` behaves monotonically when
+            Must guarantee that :meth:`Story.Place` behaves monotonically when
             given rect `fn(parameter`) as `parameter` increases. This
             usually means that both width and height increase or stay
             unchanged as `parameter` increases.
@@ -370,28 +366,26 @@ A typical loop for executing a story with using this method would look like this
     writer.Close();
 
 
-Attributes of the ElementPosition class
+Attributes of the Position class
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Exactly one parameter must be passed to the function provided by :meth:`Story.ElementPositions`. It is an object with the following attributes:
+Exactly one parameter must be passed to the function provided by :meth:`Story.ElementPositions`. It is a :class:`Position` object with the following attributes:
 
-The parameter passed to the `recorder` function is an object with the following attributes:
+* :attr:`Position.Depth` (int) -- depth of this element in the box structure.
 
-* `elpos.Depth` (int) -- depth of this element in the box structure.
+* :attr:`Position.Heading` (int) -- the header level, 0 if no header, 1-6 for :htmlTag:`h1` - :htmlTag:`h6`.
 
-* `elpos.Heading` (int) -- the header level, 0 if no header, 1-6 for :htmlTag:`h1` - :htmlTag:`h6`.
+* :attr:`Position.Href` (string) -- value of the ``href`` attribute, or null if not defined.
 
-* `elpos.Href` (string) -- value of the `href` attribute, or null if not defined.
+* :attr:`Position.Id` (string) -- value of the ``id`` attribute, or null if not defined.
 
-* `elpos.Id` (string) -- value of the `id` attribute, or null if not defined.
+* :attr:`Position.Rect` (Rect) -- element position on page.
 
-* `elpos.Rect` (Rect) -- element position on page.
+* :attr:`Position.Text` (string) -- immediate text of the element.
 
-* `elpos.Text` (string) -- immediate text of the element.
+* :attr:`Position.OpenClose` (bool) -- ``true`` when the element opens or closes. Relevant for elements that may contain other elements and thus may not immediately be closed after being created / opened.
 
-* `elpos.OpenClose` (int bit field) -- bit 0 set: opens element, bit 1 set: closes element. Relevant for elements that may contain other elements and thus may not immediately be closed after being created / opened.
+* :attr:`Position.RectNum` (int) -- count of rectangles filled by the story so far.
 
-* `elpos.RectNum` (int) -- count of rectangles filled by the story so far.
-
-* `elpos.PageNum` (int) -- page number; only present when using `Story.Write*()` functions.
+* :attr:`Position.PageNum` (int) -- page number; set this on the optional :class:`Position` argument, or when using :meth:`Story.Write`, :meth:`Story.WriteStabilized`, :meth:`Story.WriteWithLinks`, or :meth:`Story.WriteStabilizedWithLinks`.
 
 .. include:: ../footer.rst
