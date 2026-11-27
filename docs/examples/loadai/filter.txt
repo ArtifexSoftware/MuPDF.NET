@@ -1,0 +1,13 @@
+askSource=pier-schedule.pdf
+Development-mode answer (no API keys).
+
+Berth 4 is open for the timber barge (ETA 07:40).
+summarizePage=1
+Development-mode summary (no API keys).
+
+Berth schedule: berth 4 timber barge is open at 07:40. Berth 5 Pilot 2 is due at 12:10.
+rank  source              page
+----  ------------------  ----
+1     pier-schedule.pdf   1
+2     pier-schedule.pdf   1
+3     pier-schedule.pdf   1

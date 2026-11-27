@@ -1,0 +1,4 @@
+fileCount=3
+parallel-a width=960 height=560 n=3
+parallel-b width=720 height=800 n=3
+parallel-c width=640 height=640 n=3

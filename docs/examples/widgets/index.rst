@@ -10,12 +10,14 @@ GitHub: `08-FormWidgets <https://github.com/ArtifexSoftware/MuPDF.NET.Examples/t
 
 ``widgets.pdf`` is a one-page form with text, checkbox, radio, combo, and list fields. ``Widgets()`` walks page 0. Rows are ``FieldName``, ``FieldTypeString``, ``FieldValue``, sorted by name.
 
+To **extract field names and values as a dictionary**, see :doc:`39-GetKeyValues </examples/getkeyvalues/index>`.
+
 .. code-block:: cs
 
     /// <summary>List AcroForm widgets on page 1 (name, type, value)</summary>
-    static void FormWidgets(string input)
+    static void FormWidgets(string inputPath)
     {
-        using (var doc = Document.Open(input))
+        using (var doc = Document.Open(inputPath))
         using (Page page = doc[0])
         {
             // Widgets() walks the page's form fields.
@@ -30,7 +32,7 @@ GitHub: `08-FormWidgets <https://github.com/ArtifexSoftware/MuPDF.NET.Examples/t
         }
     }
 
-API: :meth:`Document.Document`, :meth:`Page.GetWidgets`, :attr:`Widget.FieldName`, :attr:`Widget.FieldTypeString`, :attr:`Widget.FieldValue`.
+API: :meth:`Document.Open`, :meth:`Page.GetWidgets` (also Widgets), :attr:`Widget.FieldName`, :attr:`Widget.FieldTypeString`, :attr:`Widget.FieldValue`.
 
 Result of ``page.Widgets()``:
 

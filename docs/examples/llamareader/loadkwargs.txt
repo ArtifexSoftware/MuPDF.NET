@@ -1,0 +1,2 @@
+table_output=html htmlTable=True
+<table><tr><th>Berth</th><th>Vessel</th><th>ETA</th><th>Status</th></tr><tr><td>2</td><td>standby</td><td>-</td><td>hold</td></tr><tr><td>4</td><td>timber barge</td><td>07:40</td><td>open</td></tr><tr><td>5</td><td>Pilot 2</td><td>12:10</td><td>due</td></tr></table>

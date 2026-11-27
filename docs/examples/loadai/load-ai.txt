@@ -1,0 +1,24 @@
+chunkCount=7
+layoutEnabled=False
+source=pier-orders.pdf
+source=pier-schedule.pdf
+
+--- ask ---
+question=Which berth is open for the timber barge?
+Development-mode answer (no API keys).
+
+Berth 4 is open for the timber barge (ETA 07:40).
+
+--- summarize ---
+source=pier-orders.pdf
+Development-mode summary (no API keys).
+
+Standing orders for North Pier: tide 07:40, wind SW 12 kn. Berth 4 is open. Unload timber before noon.
+
+--- search ---
+query=timber barge
+rank  source              page
+----  ------------------  ----
+1     pier-schedule.pdf   1
+2     pier-schedule.pdf   1
+3     pier-orders.pdf     1

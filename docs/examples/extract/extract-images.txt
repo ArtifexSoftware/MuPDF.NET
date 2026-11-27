@@ -1,0 +1,4 @@
+imageCount=3
+file=img-00-xref5.png xref=5 ext=png w=200 h=200 n=3 bytes=914 sha=721064cda24374719362607e018d4438e606933aa9bb290f4da4c156c45a36d6
+file=img-01-xref11.jpeg xref=11 ext=jpeg w=200 h=200 n=3 bytes=1993 sha=214e7c4d82cd3f8dfbf8e133613c2210eea957fbc8e89223f4251efe48a36ab0
+file=img-02-xref14.png xref=14 ext=png w=200 h=200 n=1 bytes=1158 sha=51f8cdd04939b21d917174681107210a9a92653ff5fd0acecf2fca697f7e5f14

@@ -1,0 +1,49 @@
+--- viewing ---
+viewer pages=2 size=1000x640 n=3
+--- device colorspaces ---
+device-rgb n=3 cs=DeviceRGB
+device-gray n=1 cs=DeviceGray
+device-cmyk n=4 cs=DeviceCMYK
+--- object inspection ---
+catalogXref=1
+xrefLength=34
+outputIntents.type=array
+xref=1 stream=False Type=/Catalog Subtype=null
+xref=2 stream=False Type=/Pages Subtype=null
+xref=3 stream=False Type=null Subtype=null
+xref=4 stream=False Type=/Page Subtype=null
+xref=5 stream=False Type=/Font Subtype=/Type1
+xref=6 stream=True Type=null Subtype=null
+xref=7 stream=True Type=null Subtype=null
+xref=8 stream=True Type=null Subtype=null
+--- zoom and navigation ---
+zoom pages=2 links=1 toc=2 size=1000x640
+--- ICC profiles ---
+display name=NULL.icc n=3 icc=True deviceN=False
+display.c0=Red
+display.c1=Green
+display.c2=Blue
+proof name=Proof.icc n=3 icc=True deviceN=False
+proof.c0=Red
+proof.c1=Green
+proof.c2=Blue
+--- color-managed rendering ---
+display-profile-render=ok
+--- Output Intent ---
+outputIntent name=ICCBased(RGB,Sample ICC Profile) n=3 icc=True deviceN=False
+outputIntent.c0=Red
+outputIntent.c1=Green
+outputIntent.c2=Blue
+--- DeviceN / separations ---
+separations=1
+sep.0=SpotRed
+--- overprint ---
+usesOverprint=True
+sim op=1 opm=1 bp=1 ri=1
+--- rendering intent ---
+renderingIntent perceptual=ok relative=ok
+ri=1 bp=1 op=1 opm=1
+--- prepress ---
+prepress outputIntent=True overprintPages=1 separationPages=1 pageCount=2
+--- ICC soft proof ---
+soft-proof=ok

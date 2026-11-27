@@ -1,0 +1,4 @@
+---before---
+xref=5 name=fzImg0 width=400 height=400 bpc=8 cs=ICCBased
+---after---
+xref=5 name=fzImg0 width=400 height=400 bpc=8 cs=ICCBased

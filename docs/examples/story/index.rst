@@ -13,7 +13,7 @@ The method creates an empty PDF, opens a default page, and inserts HTML into ``R
 .. code-block:: cs
 
     /// <summary>Lay out HTML into a page rectangle via Story / InsertHtmlBox</summary>
-    static void StoryHtmlBox(string output)
+    static void StoryHtmlBox(string outputPath)
     {
         // HTML content for the Story engine (CSS inline styles are supported).
         const string html = """
@@ -41,11 +41,11 @@ The method creates an empty PDF, opens a default page, and inserts HTML into ``R
             Console.WriteLine($"spare={spare}");
             Console.WriteLine($"scale={scale}");
 
-            doc.Save(output);
+            doc.Save(outputPath);
         }
     }
 
-API: :meth:`Document.Document`, :meth:`Document.NewPage`, :meth:`Page.InsertHtmlBox`, :meth:`Document.Save`.
+API: :meth:`Document.Open`, :meth:`Document.NewPage`, :meth:`Page.InsertHtmlBox`, :meth:`Document.Save`.
 
 Result of ``InsertHtmlBox`` (remaining height below the content, and the chosen scale):
 

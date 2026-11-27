@@ -1,0 +1,9 @@
+shapeCount=8
+DrawLine
+DrawRect
+DrawCircle
+DrawOval
+DrawPolyline
+DrawBezier
+DrawZigzag
+DrawSector

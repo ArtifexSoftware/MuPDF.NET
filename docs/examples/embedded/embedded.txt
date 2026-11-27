@@ -1,0 +1,2 @@
+embeddedCount=1
+note.txt	note.txt	42	dea46a02effef779f376d9125350202150e989fd8bb66b5ec8310fe332ebcbe7

@@ -1,0 +1,8 @@
+annotType=FileAttachment
+filename=spare-list.txt
+desc=Harbor spare list
+size=50
+annotCount=1
+type=FileAttachment
+extractedSize=50
+roundtrip=True

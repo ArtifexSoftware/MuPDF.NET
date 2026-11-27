@@ -8,22 +8,22 @@ Recolor page 1 of a PDF to CMYK (4 components) and save.
 
 GitHub: `05-Recolor <https://github.com/ArtifexSoftware/MuPDF.NET.Examples/tree/main/MuPDF.NET/05-Recolor>`_ in `MuPDF.NET.Examples <https://github.com/ArtifexSoftware/MuPDF.NET.Examples>`_.
 
-``color-shapes.pdf`` is a 2-page fixture of color gradients and meshes. ``Recolor(0, 4)`` converts page 0 to CMYK.
+``color-shapes.pdf`` is a one-page RGB board (hue bar, swatches, circle, round rect, triangle). ``Recolor(0, 4)`` converts page 0 to CMYK. The after image is a bit duller because CMYK cannot match every RGB hue.
 
 .. code-block:: cs
 
     /// <summary>Recolor page 1 to CMYK (4 components) and save</summary>
-    static void Recolor(string input, string output)
+    static void Recolor(string inputPath, string outputPath)
     {
-        using (var doc = Document.Open(input))
+        using (var doc = Document.Open(inputPath))
         {
             // Recolor page 0 → 4 components (DeviceCMYK / ICC-based CMYK).
             doc.Recolor(0, 4);
-            doc.Save(output);
+            doc.Save(outputPath);
         }
     }
 
-API: :meth:`Document.Document`, :meth:`Document.Recolor`, :meth:`Document.Save`.
+API: :meth:`Document.Open`, :meth:`Document.Recolor`, :meth:`Document.Save`.
 
 Result of ``recolor.pdf``:
 

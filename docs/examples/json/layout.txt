@@ -1,0 +1,20 @@
+pageCount=1
+layoutEnabled=True
+0 page-header 24 Nov 2026    Issue 12
+1 section-header North Pier bulletin
+2 section-header Wharf checklist
+3 section-header Spare list
+4 text Tide 07:40. Wind SW 12 kn. Berth 4 is
+5 text Count these items at the north gate:
+6 text 12 bolts
+7 text Unload timber before noon. Inspect the
+8 text 12 nuts
+9 text 2 shackles
+10 text Next shift starts at 13:00.
+11 text Keep this copy with the noon report.
+12 section-header Berth schedule
+13 table 
+14 text File this page with the noon minutes. Berth 4 stays open for timber.
+15 text North Pier  -  Berth 4  -  standing orders
+boxCount=16
+

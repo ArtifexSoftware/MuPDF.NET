@@ -20,7 +20,7 @@ GitHub: `01-Basic <https://github.com/ArtifexSoftware/MuPDF.NET.Examples/tree/ma
         ...
     }
 
-API: :meth:`Document.Document`.
+API: :meth:`Document.Open`.
 
 
 See whether the PDF is encrypted or still needs a password
@@ -58,7 +58,7 @@ Open a PDF and read its page count and kind
         Console.WriteLine($"doc.IsPdf = {doc.IsPdf}");
     }
 
-API: :attr:`Document.PageCount`, :attr:`Document.IsPDF`.
+API: :attr:`Document.PageCount`, :attr:`Document.IsPdf` (also IsPDF).
 
 Result:
 
@@ -85,7 +85,7 @@ Read document state flags
         Console.WriteLine($"doc.JournalIsEnabled = {doc.JournalIsEnabled}");
     }
 
-API: :attr:`Document.IsReflowable`, :attr:`Document.IsDirty`, :attr:`Document.IsFormPDF`, :attr:`Document.IsRepaired`, :attr:`Document.IsFastWebaccess`, :attr:`Document.IsClosed`, :meth:`Document.CanSaveIncrementally`, :meth:`Document.IsEnabledJournal`.
+API: :attr:`Document.IsReflowable`, :attr:`Document.IsDirty`, :attr:`Document.IsFormPdf` (also IsFormPDF), :attr:`Document.IsRepaired`, :attr:`Document.IsFastWebaccess`, :attr:`Document.IsClosed`, :meth:`Document.CanSaveIncrementally`, :meth:`Document.IsEnabledJournal` (also JournalIsEnabled).
 
 Result:
 
@@ -110,7 +110,7 @@ Read PDF structure: chapters, versions, xref length, and catalog
         Console.WriteLine($"doc.PdfCatalog = {doc.PdfCatalog}");
     }
 
-API: :attr:`Document.ChapterCount`, :meth:`Document.GetChapterPageCount`, :attr:`Document.VersionCount`, :meth:`Document.GetXrefLength`, :meth:`Document.GetPdfCatelog`.
+API: :attr:`Document.ChapterCount`, :meth:`Document.GetChapterPageCount` (also ChapterPageCount), :attr:`Document.VersionCount`, :meth:`Document.GetXrefLength` (also XrefLength), :meth:`Document.GetPdfCatalog` (also GetPdfCatelog).
 
 Result:
 
@@ -134,7 +134,7 @@ Read catalog viewer settings
         Console.WriteLine($"doc.GetSigFlags() = {doc.GetSigFlags()}");
     }
 
-API: :attr:`Document.Language`, :attr:`Document.PageLayout`, :attr:`Document.PageMode`, :meth:`Document.NeedAppearances`, :meth:`Document.GetSigFlags`.
+API: :attr:`Document.Language`, :attr:`Document.PageLayout`, :attr:`Document.PageMode`, :attr:`Document.NeedAppearances`, :meth:`Document.GetSigFlags`.
 
 Result:
 
@@ -211,7 +211,7 @@ List embedded file names
             Console.WriteLine($"doc.GetEmbeddedFileNames(): {name}");
     }
 
-API: :meth:`Document.GetEmbfileCount`, :meth:`Document.GetEmbfileNames`.
+API: :meth:`Document.GetEmbfileCount` (also EmbeddedFileCount), :meth:`Document.GetEmbfileNames` (also GetEmbeddedFileNames).
 
 Result:
 
@@ -277,7 +277,7 @@ Read the standard PDF Info dictionary
             Console.WriteLine($"doc.Metadata[\"{kv.Key}\"] = {kv.Value}");
     }
 
-API: :attr:`Document.MetaData`.
+API: :attr:`Document.Metadata` (also MetaData).
 
 Result:
 
@@ -299,7 +299,7 @@ Read the XMP metadata stream
         Console.WriteLine($"doc.GetXmlMetadata() = {xml}");
     }
 
-API: :meth:`Document.XrefXmlMetaData`, :meth:`Document.GetXmlMetadata`.
+API: :meth:`Document.XrefXmlMetaData` (also XrefXmlMetadata), :meth:`Document.GetXmlMetadata`.
 
 Result:
 
@@ -416,7 +416,7 @@ Read optional content groups and layer UI
         }
     }
 
-API: :meth:`Document.GetOcgs`, :meth:`Document.GetLayers`, :meth:`Document.LayerUIConfigs`.
+API: :meth:`Document.GetOcgs`, :meth:`Document.GetLayers`, :meth:`Document.LayerUIConfigs` (also LayerUiConfigs).
 
 Result:
 
@@ -436,7 +436,7 @@ Read the PDF trailer dictionary
         Console.WriteLine($"doc.PdfTrailer() = {doc.PdfTrailer()}");
     }
 
-API: :meth:`Document.GetPdfTrailer`.
+API: :meth:`Document.GetPdfTrailer` (also PdfTrailer).
 
 Result:
 
@@ -451,9 +451,9 @@ Write a full copy of the open PDF
 .. code-block:: cs
 
     /// <summary>Write a full copy of the open PDF</summary>
-    static void SaveCopy(Document doc, string output)
+    static void SaveCopy(Document doc, string outputPath)
     {
-        doc.Save(output);
+        doc.Save(outputPath);
     }
 
 API: :meth:`Document.Save`.
@@ -508,7 +508,7 @@ Read each page's boxes, fonts, images, XObjects, and annotation xrefs
         }
     }
 
-API: :meth:`Document.LoadPage`, :meth:`Page.GetLabel`, :attr:`Page.Xref`, :attr:`Page.Rotation`, :attr:`Page.Rect`, :attr:`Page.MediaBox`, :attr:`Page.CropBox`, :attr:`Page.BleedBox`, :attr:`Page.TrimBox`, :attr:`Page.ArtBox`, :meth:`Document.GetPageFonts`, :meth:`Document.GetPageImages`, :meth:`Document.GetPageXObjects`, :meth:`Page.GetAnnotXrefs`.
+API: :meth:`Document.LoadPage`, :meth:`Page.GetLabel`, :attr:`Page.Xref`, :attr:`Page.Rotation`, :attr:`Page.Rect`, :attr:`Page.MediaBox`, :attr:`Page.CropBox`, :attr:`Page.BleedBox`, :attr:`Page.TrimBox`, :attr:`Page.ArtBox`, :meth:`Document.GetPageFonts`, :meth:`Document.GetPageImages`, :meth:`Document.GetPageXobjects` (also GetPageXObjects), :meth:`Page.GetAnnotXrefs`.
 
 Result:
 
