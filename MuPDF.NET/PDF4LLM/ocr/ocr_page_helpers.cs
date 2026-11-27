@@ -143,7 +143,7 @@ namespace MuPDF.NET.PDF4LLM.Ocr
                 byte[] buffer = OcrFont.Value.Buffer;
                 if (buffer == null || buffer.Length == 0)
                     throw new InvalidOperationException("CJK fallback font buffer is empty.");
-                page.InsertFont(OcrFontName, fontbuffer: buffer);
+                page.InsertFont(OcrFontName, fontBuffer: buffer);
             }
             catch (Exception)
             {

@@ -78,9 +78,12 @@ Yet others are handy, general-purpose utilities.
 :meth:`Utils.WriteBarcode`                              Writes a barcode to an image file
 :meth:`Utils.GetBarcodePixmap`                          Creates a barcode as a `Pixmap` object.
 :meth:`Utils.ReplaceBytes`                              Replaces bytes from a source buffer
-:meth:`Utils.UseLayout`                                 Enable or disable the layout analysis pipeline
-:attr:`Utils.LayoutAvailable`                           Whether a layout provider is currently registered
-:attr:`Utils.LayoutEnabled`                             Whether the layout analysis pipeline is enabled
+:meth:`MuPDF4LLM.SetLayout`                             Enable or disable the layout analysis pipeline
+:attr:`MuPDF4LLM.LayoutEnabled`                         Whether the layout analysis pipeline is enabled
+:attr:`MuPDF4LLM.LayoutAvailable`                       Whether a layout provider is currently registered
+:meth:`Utils.SetLayout`                                 Same as :meth:`MuPDF4LLM.SetLayout` (also UseLayout)
+:attr:`Utils.LayoutEnabled`                             Same as :attr:`MuPDF4LLM.LayoutEnabled`
+:attr:`Utils.LayoutAvailable`                           Same as :attr:`MuPDF4LLM.LayoutAvailable`
 :attr:`Utils.RapidOcrAvailable`                         Whether RapidOCR initialized successfully
 :meth:`Utils.LlamaMarkdownReader`                       LlamaIndex-compatible PDF markdown reader
 :meth:`Utils.GetKeyValues`                              Extract form fields and their values
@@ -820,25 +823,24 @@ Yet others are handy, general-purpose utilities.
       :arg int limit: The number of matches to make, defaults to 1.
 
 
-   .. method:: UseLayout(bool yes)
+   .. method:: SetLayout(bool useLayout)
+              UseLayout(bool yes)
 
-      Enable or disable the layout analysis pipeline used by :meth:`Document.ToMarkdown`, :meth:`Document.ToJson`, :meth:`Document.ToText` and :meth:`Document.ToChunks`.
+      Same as :meth:`MuPDF4LLM.SetLayout`. See :class:`MuPDF4LLM`. Enable or disable the layout analysis pipeline used by :meth:`Document.ToMarkdown`, :meth:`Document.ToJson`, :meth:`Document.ToText` and :meth:`Document.ToChunks`.
 
-      :arg bool yes: `true` turns the pipeline on and registers a layout provider when one is available. `false` turns it off.
-
-      Prefer this over setting layout flags directly. Several conversion methods require the pipeline to be on.
+      :arg bool useLayout: `true` turns the pipeline on and registers a layout provider when one is available. `false` turns it off.
 
 
    .. attribute:: LayoutEnabled
 
-      Whether the layout analysis pipeline is currently enabled.
+      Same as :attr:`MuPDF4LLM.LayoutEnabled`. Whether the layout analysis pipeline is currently enabled.
 
       :type: bool
 
 
    .. attribute:: LayoutAvailable
 
-      Whether a layout provider is currently registered (the layout worker could be started).
+      Same as :attr:`MuPDF4LLM.LayoutAvailable`. Whether a layout provider is currently registered (the layout worker could be started).
 
       :type: bool
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using MuPDF.NET.PDF4LLM;
+using LlmEngine = MuPDF.NET.PDF4LLM.MuPDF4LLM;
 using MuPDF.NET.PDF4LLM.Helpers;
 
 namespace MuPDF.NET
@@ -39,7 +40,7 @@ namespace MuPDF.NET
             string tableOutput = "markdown",
             float? edgeThreshold = null)
         {
-            return MuPDF4LLM.ToMarkdown(
+            return LlmEngine.ToMarkdown(
                 this,
                 header,
                 footer,
@@ -84,7 +85,7 @@ namespace MuPDF.NET
             string tableOutput = "markdown",
             float? edgeThreshold = null)
         {
-            return MuPDF4LLM.ToJson(
+            return LlmEngine.ToJson(
                 this,
                 imageDpi,
                 imageFormat,
@@ -123,7 +124,7 @@ namespace MuPDF.NET
             OcrPageFunction ocrFunction = null,
             float? edgeThreshold = null)
         {
-            return MuPDF4LLM.ToText(
+            return LlmEngine.ToText(
                 this,
                 filename,
                 header,
@@ -166,7 +167,7 @@ namespace MuPDF.NET
             bool forceOcr = false,
             OcrPageFunction ocrFunction = null)
         {
-            return MuPDF4LLM.ToChunks(
+            return LlmEngine.ToChunks(
                 this,
                 maxTokens,
                 minTokens,
@@ -192,7 +193,7 @@ namespace MuPDF.NET
         /// <summary>Extract form fields and their values from this PDF.</summary>
         public Dictionary<string, Dictionary<string, object>> GetKeyValues(bool includeXrefs = false)
         {
-            return MuPDF4LLM.GetKeyValues(this, includeXrefs);
+            return LlmEngine.GetKeyValues(this, includeXrefs);
         }
     }
 }

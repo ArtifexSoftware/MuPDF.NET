@@ -946,7 +946,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. note::
 
-     The methods :meth:`ToMarkdown`, :meth:`ToJson`, :meth:`ToText` and :meth:`ToChunks` prepare document content for LLM and RAG workflows. Several of them depend on the **layout pipeline**, which must be switched on first with :meth:`Utils.UseLayout` (`true`). Parameters marked *(layout mode)* only take effect when the layout pipeline is active.
+     The methods :meth:`ToMarkdown`, :meth:`ToJson`, :meth:`ToText` and :meth:`ToChunks` prepare document content for LLM and RAG workflows. Several of them depend on the **layout pipeline**, which must be switched on first with :meth:`MuPDF4LLM.SetLayout` (`true`). Parameters marked *(layout mode)* only take effect when the layout pipeline is active.
 
   .. method:: ToMarkdown(bool header: true, bool footer: true, List<int> pages: null, bool writeImages: false, bool embedImages: false, string imagePath: "", string imageFormat: "png", string filename: "", bool forceText: true, bool pageChunks: false, bool pageSeparators: false, int dpi: 150, int ocrDpi: 150, float pageWidth: 612, float? pageHeight: null, bool ignoreCode: false, bool showProgress: false, bool useOcr: true, string ocrLanguage: "eng", bool forceOcr: false, OcrPageFunction ocrFunction: null, string tableOutput: "markdown", float? edgeThreshold: null)
 
@@ -989,7 +989,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Converts the document to a JSON representation of its layout: every page with its classified layout boxes (text, titles, tables, pictures, headers, footers and so on), their bounding boxes and content.
 
-    **Requires the layout pipeline.** Raises `NotSupportedException` if :attr:`Utils.LayoutEnabled` is `false`.
+    **Requires the layout pipeline.** Raises `NotSupportedException` if :attr:`MuPDF4LLM.LayoutEnabled` is `false`.
 
     :arg int imageDpi: resolution of extracted images.
     :arg string imageFormat: image file format, for example `"png"`.
@@ -1014,7 +1014,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Converts the document to plain text in reading order, with tables drawn as text tables.
 
-    **Requires the layout pipeline.** Raises `NotSupportedException` if :attr:`Utils.LayoutEnabled` is `false`.
+    **Requires the layout pipeline.** Raises `NotSupportedException` if :attr:`MuPDF4LLM.LayoutEnabled` is `false`.
 
     :arg string filename: file name stored in the metadata of the result.
     :arg bool header: include page-header regions in the output.
@@ -1041,7 +1041,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Splits the document into retrieval-ready chunks for RAG pipelines. The document is broken into sentences, and chunk boundaries are placed where the layout suggests a natural break (new heading, table, page, large gap and so on), within the given token limits.
 
-    **Requires the layout pipeline.** Raises `NotSupportedException` if :attr:`Utils.LayoutEnabled` is `false`.
+    **Requires the layout pipeline.** Raises `NotSupportedException` if :attr:`MuPDF4LLM.LayoutEnabled` is `false`.
 
     :arg int maxTokens: maximum tokens per chunk. Must be positive.
     :arg int minTokens: target minimum tokens per chunk. Must not be negative.
@@ -1070,7 +1070,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     .. code-block:: cs
 
-        Utils.UseLayout(true);
+        MuPDF4LLM.SetLayout(true);
         Document doc = Document.Open("input.pdf");
         ChunkedDocument chunks = doc.ToChunks(maxTokens: 300);
         foreach (Chunk chunk in chunks)

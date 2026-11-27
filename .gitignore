@@ -36,8 +36,7 @@ bld/
 
 # Test-generated output (PDFs, markdown, etc.)
 TestDocuments/MuPDF.NET.Test/_Output/
-TestDocuments/MuPDF.NET.PDF4LLM.Test/_Output/
-TestDocuments/Demo/_Output/
+Demo/Output/
 
 # Real Office license keys — never commit. Do not put keys in source, tests, or nupkgs.
 TestDocuments/office.keys

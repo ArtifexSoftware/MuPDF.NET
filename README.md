@@ -105,7 +105,7 @@ That creates a per-user virtual environment and pip-installs **both** of these f
 
 MuPDF.NET finds that venv automatically.
 
-Using the worker means **PyMuPDF is part of your solution**, not only MuPDF.NET. PyMuPDF has its own [license](https://pymupdf.io) (Artifex Community License and commercial terms). A MuPDF.NET license does not by itself cover shipping or running PyMuPDF. If you do not want that, skip this setup target and keep classic extraction (`Utils.UseLayout(false)`). For commercial use of the worker, [contact Artifex](https://artifex.com/contact/mupdf-net).
+Using the worker means **PyMuPDF is part of your solution**, not only MuPDF.NET. PyMuPDF has its own [license](https://pymupdf.io) (Artifex Community License and commercial terms). A MuPDF.NET license does not by itself cover shipping or running PyMuPDF. If you do not want that, skip this setup target and keep classic extraction (`MuPDF4LLM.SetLayout(false)`). For commercial use of the worker, [contact Artifex](https://artifex.com/contact/mupdf-net).
 
 | OS | Location |
 |----|----------|
@@ -128,8 +128,8 @@ To use another Python 3.11+ interpreter that already has pymupdf 2.1, set **`MUP
 
 ```csharp
 bool layoutReady = Utils.LayoutPythonAvailable;  // worker can be imported
-bool layoutActive = Utils.LayoutAvailable;       // provider is registered
-Utils.UseLayout(false);                          // classic extraction
+bool layoutActive = MuPDF4LLM.LayoutAvailable;   // provider is registered
+MuPDF4LLM.SetLayout(false);                      // classic extraction
 ```
 
 ---
@@ -154,7 +154,7 @@ doc.Close();
 using MuPDF.NET;
 
 using Document doc = new Document("document.pdf");
-Utils.UseLayout(false);                         // omit this line to use layout when installed
+MuPDF4LLM.SetLayout(false);                     // omit this line to use layout when installed
 string markdown = doc.ToMarkdown(showProgress: false);
 File.WriteAllText("document.md", markdown);
 ```
@@ -370,6 +370,7 @@ Typical workflow: open → get a page → operate → save → close.
 | `Barcode` | Scan and generate barcodes |
 | `Story` | Flow HTML onto pages |
 | `Matrix` | Rotation, scaling, translation |
+| `MuPDF4LLM` | Layout analysis switch for Markdown / JSON / text extract |
 
 ### `Document`
 
@@ -394,12 +395,22 @@ Typical workflow: open → get a page → operate → save → close.
 | `doc.GetKeyValues(...)` | Form field names and values |
 | `doc.Close()` | Release resources |
 
+### `MuPDF4LLM`
+
+| Member | Description |
+|---|---|
+| `MuPDF4LLM.SetLayout(bool)` | Enable or disable layout analysis (`using MuPDF.NET;` is enough) |
+| `MuPDF4LLM.LayoutEnabled` | Whether the layout pipeline is enabled (same as `Utils.LayoutEnabled`) |
+| `MuPDF4LLM.LayoutAvailable` | Whether a layout provider is registered (same as `Utils.LayoutAvailable`) |
+| `MuPDF4LLM.SetLayoutProvider(...)` | Register or clear the page layout callback |
+
 ### `Utils`
 
 | Member | Description |
 |---|---|
-| `Utils.UseLayout(bool)` | Enable or disable layout analysis |
-| `Utils.LayoutAvailable` | Whether a layout provider is registered |
+| `Utils.SetLayout(bool)` | Same as `MuPDF4LLM.SetLayout` (also `Utils.UseLayout`) |
+| `Utils.LayoutEnabled` | Same as `MuPDF4LLM.LayoutEnabled` |
+| `Utils.LayoutAvailable` | Same as `MuPDF4LLM.LayoutAvailable` |
 | `Utils.LoadAiAsync(...)` | **net8.0** — chunk, embed, and index PDFs for RAG |
 | `Utils.MarkdownToPdf(...)` | Markdown file → PDF |
 | `Utils.GetKeyValues(...)` | Form fields from a `Document` or path |

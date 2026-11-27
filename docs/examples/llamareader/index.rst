@@ -8,7 +8,7 @@ Load one LlamaIndex document per page with :meth:`Utils.LlamaMarkdownReader`.
 
 GitHub: `38-LlamaMarkdownReader <https://github.com/ArtifexSoftware/MuPDF.NET.Examples/tree/main/MuPDF.NET/38-LlamaMarkdownReader>`_ in `MuPDF.NET.Examples <https://github.com/ArtifexSoftware/MuPDF.NET.Examples>`_.
 
-``llama-pages.pdf`` is a two-page North Pier notice (500×280 standing orders, 500×260 berth schedule). ``Utils.UseLayout(false)`` selects the classic extract path (no layout worker). ``LoadData`` returns one ``LlamaIndexDocument`` per page. ``Text`` is that page's Markdown. ``ExtraInfo`` includes ``page`` (1-based), ``total_pages``, ``file_path``, and PDF metadata. The listing is UTF-8 without a BOM.
+``llama-pages.pdf`` is a two-page North Pier notice (500×280 standing orders, 500×260 berth schedule). ``MuPDF4LLM.SetLayout(false)`` selects the classic extract path (no layout worker). ``LoadData`` returns one ``LlamaIndexDocument`` per page. ``Text`` is that page's Markdown. ``ExtraInfo`` includes ``page`` (1-based), ``total_pages``, ``file_path``, and PDF metadata. The listing is UTF-8 without a BOM.
 
 ``LlamaMarkdownReader(metaFilter)`` rewrites that ExtraInfo. ``LoadData`` also accepts ``extraInfo`` (keys merged into every page) and ``loadKwargs`` (options forwarded to the Markdown extractor, such as ``table_output``).
 
@@ -16,13 +16,13 @@ To **convert a whole PDF to one Markdown string**, see :doc:`32-ToMarkdown </exa
 
 .. code-block:: cs
 
-    Utils.UseLayout(false);
+    MuPDF4LLM.SetLayout(false);
     LlamaMarkdownReaderDefault(inputPath, outputPath);
     LlamaMarkdownReaderMetaFilter(inputPath);
     LlamaMarkdownReaderExtraInfo(inputPath);
     LlamaMarkdownReaderLoadKwargs(inputPath);
 
-API: :meth:`Utils.UseLayout`, :meth:`Utils.LlamaMarkdownReader`, :meth:`PDFMarkdownReader.LoadData`.
+API: :meth:`MuPDF4LLM.SetLayout` (also :meth:`Utils.SetLayout`), :meth:`Utils.LlamaMarkdownReader`, :meth:`PDFMarkdownReader.LoadData`.
 
 
 Default reader (no parameters)
@@ -41,7 +41,7 @@ Default reader (no parameters)
 
         var listing = new StringBuilder();
         listing.AppendLine($"docCount={docs.Count}");
-        listing.AppendLine($"layoutEnabled={Utils.LayoutEnabled}");
+        listing.AppendLine($"layoutEnabled={MuPDF4LLM.LayoutEnabled}");
         foreach (var d in docs)
         {
             object? page = null;
@@ -151,7 +151,7 @@ Result:
 loadKwargs — options for the Markdown extractor
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``LoadData(inputPath, loadKwargs: loadKwargs)`` forwards keys such as ``table_output`` and ``show_progress`` to the classic extractor (``Utils.UseLayout(false)``). ``table_output`` is ``markdown`` (default) or ``html``. Page 2 of ``llama-pages.pdf`` is a berth table.
+``LoadData(inputPath, loadKwargs: loadKwargs)`` forwards keys such as ``table_output`` and ``show_progress`` to the classic extractor (``MuPDF4LLM.SetLayout(false)``). ``table_output`` is ``markdown`` (default) or ``html``. Page 2 of ``llama-pages.pdf`` is a berth table.
 
 .. code-block:: cs
 

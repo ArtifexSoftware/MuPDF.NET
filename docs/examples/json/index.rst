@@ -8,7 +8,7 @@ Convert a PDF to layout JSON with ``Document.ToJson``.
 
 GitHub: `33-ToJsonLayout <https://github.com/ArtifexSoftware/MuPDF.NET.Examples/tree/main/MuPDF.NET/33-ToJsonLayout>`_ in `MuPDF.NET.Examples <https://github.com/ArtifexSoftware/MuPDF.NET.Examples>`_.
 
-``bulletin.pdf`` is the same one-page North Pier bulletin as :doc:`32-ToMarkdown </examples/markdown/index>` (500×460). ``Utils.UseLayout(true)`` selects the layout path. ``Document.ToJson`` writes ``bulletin.json`` with per-page ``boxes`` (``boxclass``, bbox, text). ``useOcr`` is ``false`` because this PDF is already text. Without a layout worker, the method prints ``LAYOUT_UNAVAILABLE`` and skips JSON.
+``bulletin.pdf`` is the same one-page North Pier bulletin as :doc:`32-ToMarkdown </examples/markdown/index>` (500×460). ``MuPDF4LLM.SetLayout(true)`` selects the layout path. ``Document.ToJson`` writes ``bulletin.json`` with per-page ``boxes`` (``boxclass``, bbox, text). ``useOcr`` is ``false`` because this PDF is already text. Without a layout worker, the method prints ``LAYOUT_UNAVAILABLE`` and skips JSON.
 
 To **convert the same PDF to Markdown** with layout off, see :doc:`32-ToMarkdown </examples/markdown/index>`. For **layout plain text**, see :doc:`34-ToText </examples/totext/index>`. For **retrieval chunks**, see :doc:`35-ToChunks </examples/chunks/index>`.
 
@@ -18,32 +18,32 @@ To **convert the same PDF to Markdown** with layout off, see :doc:`32-ToMarkdown
     static void ToJsonLayout(string inputPath, string outputPath)
     {
         // Remember prior layout flag so we restore it for other examples in the same process.
-        bool prior = Utils.LayoutEnabled;
+        bool prior = MuPDF4LLM.LayoutEnabled;
         try
         {
             // ToJson requires UseLayout=true and a registered layout worker.
-            if (!Utils.LayoutAvailable)
+            if (!MuPDF4LLM.LayoutAvailable)
             {
                 Console.WriteLine("LAYOUT_UNAVAILABLE");
                 return;
             }
 
-            Utils.UseLayout(true);
+            MuPDF4LLM.SetLayout(true);
 
             using var doc = Document.Open(inputPath);
             string json = doc.ToJson(showProgress: false, useOcr: false) ?? "";
             File.WriteAllText(outputPath, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             Console.WriteLine($"pageCount={doc.PageCount}");
-            Console.WriteLine($"layoutEnabled={Utils.LayoutEnabled}");
+            Console.WriteLine($"layoutEnabled={MuPDF4LLM.LayoutEnabled}");
             WriteBoxes(json);
         }
         finally
         {
-            Utils.UseLayout(prior);
+            MuPDF4LLM.SetLayout(prior);
         }
     }
 
-API: :meth:`Document.Open`, :attr:`Utils.LayoutAvailable`, :meth:`Utils.UseLayout`, :meth:`Document.ToJson`.
+API: :meth:`Document.Open`, :attr:`MuPDF4LLM.LayoutAvailable` (also :attr:`Utils.LayoutAvailable`), :meth:`MuPDF4LLM.SetLayout` (also :meth:`Utils.SetLayout`), :meth:`Document.ToJson`.
 
 ``bulletin.pdf``:
 

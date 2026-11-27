@@ -16,6 +16,9 @@ namespace MuPDF.NET.PDF4LLM
             Page.GetLayoutProvider = provider;
         }
 
+        /// <summary>Same as <see cref="SetUseLayout"/>.</summary>
+        public static void SetLayout(bool useLayout) => SetUseLayout(useLayout);
+
         /// <summary>Enable or disable the layout analysis pipeline.</summary>
         /// <param name="useLayout">When true, activate layout; when false, restore legacy header helpers.</param>
         public static void SetUseLayout(bool useLayout)
