@@ -9,7 +9,8 @@ namespace MuPDF.NET.PDF4LLM
 {
     /// <summary>
     /// PDF extraction and layout-to-markdown API compiled into MuPDF.NET.
-    /// Prefer <see cref="Document.ToMarkdown"/> / <c>Utils.UseLayout</c>. This type remains only so the deprecated PDF4LLM stub can type-forward.
+    /// Public entry: <see cref="MuPDF.NET.MuPDF4LLM"/> in namespace <c>MuPDF.NET</c> (same as <see cref="Document"/>).
+    /// This type remains so the deprecated PDF4LLM stub can type-forward.
     /// </summary>
     public static partial class MuPDF4LLM
     {

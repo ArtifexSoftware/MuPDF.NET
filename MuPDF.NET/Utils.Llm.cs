@@ -8,6 +8,7 @@ using MuPDF.NET.PDF4LLM.AI;
 using MuPDF.NET.PDF4LLM.AI.Options;
 #endif
 using MuPDF.NET.PDF4LLM;
+using LlmEngine = MuPDF.NET.PDF4LLM.MuPDF4LLM;
 using MuPDF.NET.PDF4LLM.Helpers;
 using MuPDF.NET.PDF4LLM.Helpers.TableHtml;
 using MuPDF.NET.PDF4LLM.Layout;
@@ -23,24 +24,30 @@ namespace MuPDF.NET
     /// </summary>
     public static partial class Utils
     {
-        /// <summary>Enable or disable the layout analysis pipeline (<c>use_layout</c>).</summary>
-        public static void UseLayout(bool yes) => MuPDF4LLM.SetUseLayout(yes);
+        /// <summary>Same as <see cref="MuPDF.NET.MuPDF4LLM.SetLayout"/>.</summary>
+        public static void SetLayout(bool useLayout) => LlmEngine.SetUseLayout(useLayout);
 
-        /// <summary>Whether the layout analysis pipeline is enabled.</summary>
-        public static bool LayoutEnabled => MuPDF4LLM.UseLayout;
+        /// <summary>
+        /// Enable or disable the layout analysis pipeline.
+        /// Same as <see cref="SetLayout"/> / <see cref="MuPDF.NET.MuPDF4LLM.SetLayout"/>.
+        /// </summary>
+        public static void UseLayout(bool yes) => SetLayout(yes);
+
+        /// <summary>Whether the layout analysis pipeline is enabled. Same as <see cref="MuPDF.NET.MuPDF4LLM.LayoutEnabled"/>.</summary>
+        public static bool LayoutEnabled => LlmEngine.UseLayout;
 
         /// <summary>
         /// Raw layout flag without registering or clearing the page provider.
-        /// Prefer <see cref="UseLayout"/> for normal enable/disable.
+        /// Prefer <see cref="SetLayout"/> for normal enable/disable.
         /// </summary>
         public static bool LayoutFlag
         {
-            get => MuPDF4LLM.UseLayout;
-            set => MuPDF4LLM.UseLayout = value;
+            get => LlmEngine.UseLayout;
+            set => LlmEngine.UseLayout = value;
         }
 
         /// <summary>Whether a layout provider is currently registered.</summary>
-        public static bool LayoutAvailable => MuPDF4LLM.LayoutAvailable;
+        public static bool LayoutAvailable => LlmEngine.LayoutAvailable;
 
         /// <summary>Whether the layout Python worker can be imported.</summary>
         public static bool LayoutPythonAvailable => PyMuPdfLayout.IsAvailable;
@@ -65,7 +72,7 @@ namespace MuPDF.NET
             IReadOnlyList<string> inputs,
             string backend = "md")
         {
-            return MuPDF4LLM.ConvertBatch(inputs, backend);
+            return LlmEngine.ConvertBatch(inputs, backend);
         }
 
         /// <summary>Returns a LlamaIndex-compatible PDF markdown reader.</summary>
@@ -80,7 +87,7 @@ namespace MuPDF.NET
             Document doc,
             bool includeXrefs = false)
         {
-            return MuPDF4LLM.GetKeyValues(doc, includeXrefs);
+            return LlmEngine.GetKeyValues(doc, includeXrefs);
         }
 
         /// <summary>Extract form fields from a PDF file path.</summary>
@@ -88,7 +95,7 @@ namespace MuPDF.NET
             string path,
             bool includeXrefs = false)
         {
-            return MuPDF4LLM.GetKeyValues(path, includeXrefs);
+            return LlmEngine.GetKeyValues(path, includeXrefs);
         }
 
         /// <summary>Render a Markdown file to PDF (Story).</summary>
@@ -100,7 +107,7 @@ namespace MuPDF.NET
             Archive archive = null,
             string outputPath = null)
         {
-            return MuPDF4LLM.MarkdownToPdf(mdPath, userCss, pageRect, margins, archive, outputPath);
+            return LlmEngine.MarkdownToPdf(mdPath, userCss, pageRect, margins, archive, outputPath);
         }
 
         /// <summary>Convert a document to Markdown.</summary>
@@ -130,7 +137,7 @@ namespace MuPDF.NET
             string tableOutput = "markdown",
             float? edgeThreshold = null)
         {
-            return MuPDF4LLM.ToMarkdown(
+            return LlmEngine.ToMarkdown(
                 doc, header, footer, pages, writeImages, embedImages, imagePath, imageFormat,
                 filename, forceText, pageChunks, pageSeparators, dpi, ocrDpi, pageWidth, pageHeight,
                 ignoreCode, showProgress, useOcr, ocrLanguage, forceOcr, ocrFunction, tableOutput,
@@ -164,7 +171,7 @@ namespace MuPDF.NET
             string tableOutput = "markdown",
             float? edgeThreshold = null)
         {
-            return MuPDF4LLM.ToMarkdown(
+            return LlmEngine.ToMarkdown(
                 path, header, footer, pages, writeImages, embedImages, imagePath, imageFormat,
                 filename, forceText, pageChunks, pageSeparators, dpi, ocrDpi, pageWidth, pageHeight,
                 ignoreCode, showProgress, useOcr, ocrLanguage, forceOcr, ocrFunction, tableOutput,
@@ -190,7 +197,7 @@ namespace MuPDF.NET
             string tableOutput = "markdown",
             float? edgeThreshold = null)
         {
-            return MuPDF4LLM.ToJson(
+            return LlmEngine.ToJson(
                 doc, imageDpi, imageFormat, imagePath, pages, ocrDpi, writeImages, embedImages,
                 showProgress, forceText, useOcr, ocrLanguage, forceOcr, ocrFunction, tableOutput,
                 edgeThreshold);
@@ -215,7 +222,7 @@ namespace MuPDF.NET
             string tableOutput = "markdown",
             float? edgeThreshold = null)
         {
-            return MuPDF4LLM.ToJson(
+            return LlmEngine.ToJson(
                 path, imageDpi, imageFormat, imagePath, pages, ocrDpi, writeImages, embedImages,
                 showProgress, forceText, useOcr, ocrLanguage, forceOcr, ocrFunction, tableOutput,
                 edgeThreshold);
@@ -242,7 +249,7 @@ namespace MuPDF.NET
             OcrPageFunction ocrFunction = null,
             float? edgeThreshold = null)
         {
-            return MuPDF4LLM.ToText(
+            return LlmEngine.ToText(
                 doc, filename, header, footer, pages, ignoreCode, showProgress, forceText, ocrDpi,
                 useOcr, ocrLanguage, tableFormat, pageChunks, tableMaxWidth, tableMinColWidth,
                 forceOcr, ocrFunction, edgeThreshold);
@@ -269,7 +276,7 @@ namespace MuPDF.NET
             OcrPageFunction ocrFunction = null,
             float? edgeThreshold = null)
         {
-            return MuPDF4LLM.ToText(
+            return LlmEngine.ToText(
                 path, filename, header, footer, pages, ignoreCode, showProgress, forceText, ocrDpi,
                 useOcr, ocrLanguage, tableFormat, pageChunks, tableMaxWidth, tableMinColWidth,
                 forceOcr, ocrFunction, edgeThreshold);
@@ -298,7 +305,7 @@ namespace MuPDF.NET
             bool forceOcr = false,
             OcrPageFunction ocrFunction = null)
         {
-            return MuPDF4LLM.ToChunks(
+            return LlmEngine.ToChunks(
                 doc, maxTokens, minTokens, breakpointThreshold, mergeSmallChunks, tableMode,
                 respectSectionStarts, headerFooterMode, sentenceSplitter, tokenizer, weights, pages,
                 tableOutput, extractImages, dpi, edgeThreshold: edgeThreshold, forceText: forceText,
@@ -328,7 +335,7 @@ namespace MuPDF.NET
             bool forceOcr = false,
             OcrPageFunction ocrFunction = null)
         {
-            return MuPDF4LLM.ToChunks(
+            return LlmEngine.ToChunks(
                 path, maxTokens, minTokens, breakpointThreshold, mergeSmallChunks, tableMode,
                 respectSectionStarts, headerFooterMode, sentenceSplitter, tokenizer, weights, pages,
                 tableOutput, extractImages, dpi, edgeThreshold: edgeThreshold, forceText: forceText,
@@ -383,7 +390,7 @@ namespace MuPDF.NET
             IEnumerable<string> pdfPaths,
             MicrosoftAIConnectorOptions options = null,
             CancellationToken cancellationToken = default)
-            => MuPDF4LLM.LoadAiAsync(pdfPaths, options, cancellationToken);
+            => LlmEngine.LoadAiAsync(pdfPaths, options, cancellationToken);
 
         /// <summary>In-memory AI pipeline for tests and samples (hash embeddings).</summary>
         public static MicrosoftAIConnectorOptions CreateDevelopmentAiOptions(

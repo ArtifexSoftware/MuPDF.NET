@@ -13,7 +13,7 @@ A *ChunkedDocument* is a read-only list of :ref:`Chunk <ChunkedDocument_Chunk>` 
 
 .. note::
 
-   :meth:`Document.ToChunks` requires the layout pipeline. Switch it on with :meth:`Utils.UseLayout` (`true`) before calling it.
+   :meth:`Document.ToChunks` requires the layout pipeline. Switch it on with :meth:`MuPDF4LLM.SetLayout` (`true`) before calling it.
 
 .. note::
 
@@ -201,7 +201,7 @@ A *ChunkedDocument* is a read-only list of :ref:`Chunk <ChunkedDocument_Chunk>` 
 
 .. code-block:: cs
 
-    Utils.UseLayout(true);
+    MuPDF4LLM.SetLayout(true);
     Document doc = Document.Open("report.pdf");
     ChunkedDocument chunks = doc.ToChunks(maxTokens: 300);
 

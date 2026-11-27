@@ -33,6 +33,7 @@ Classes
    LinkInfo.rst
    Matrix.rst
    Morph.rst
+   MuPDF4LLM.rst
    Outline.rst
    Page.rst
    PDFMarkdownReader.rst

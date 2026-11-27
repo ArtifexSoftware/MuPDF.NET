@@ -2,6 +2,16 @@
 
 Notable changes in each MuPDF.NET release.
 
+### [4.1.2] - 2026-11-27
+
+- Layout analysis is switched with `MuPDF4LLM` in the same namespace as `Document` (`using MuPDF.NET;`): `SetLayout`, `LayoutEnabled`, `LayoutAvailable`, `SetLayoutProvider`.
+- `Utils.SetLayout` is the same method as `MuPDF4LLM.SetLayout`. `Utils.UseLayout` remains as that method's previous name. `Utils.LayoutEnabled` is the same as `MuPDF4LLM.LayoutEnabled`.
+- The Demo project writes `Demo/Output/hello.pdf` on first run. It does not need an Office key.
+
+### [4.1.1] - 2026-11-18
+
+- Documentation updates for extract APIs (`ToMarkdown` / `ToJson` / `ToText` / `ToChunks`), ChunkedDocument, and Office.
+
 ### [4.1.0] - 2026-11-11
 
 - Built on MuPDF **1.28.6**. Ported from [PyMuPDF](https://pypi.org/project/pymupdf/) **2.1**.

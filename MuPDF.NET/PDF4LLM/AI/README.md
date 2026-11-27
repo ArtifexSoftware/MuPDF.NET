@@ -54,6 +54,6 @@ ollama pull nomic-embed-text
 | `MaxOutputTokens` | `512` | Short factual answers |
 | HTTP timeout | several minutes | Indexing and chat can be slow |
 
-Demo: `dotnet run --project Demo -- ollama` (national-capitals.pdf) or `dotnet run --project Demo -- ollama-magazines` (Magazines-PDF.pdf). Environment: `OLLAMA_HOST`, `OLLAMA_MODEL`, `OLLAMA_EMBED_MODEL`, optional `MUPDF_NET_INDEX` for `LocalIndexPath` (`PDF4LLM_INDEX` is a deprecated alias).
+Example: `dotnet run --project MuPDF.NET/41-LoadAi` in [MuPDF.NET.Examples](https://github.com/ArtifexSoftware/MuPDF.NET.Examples). Environment: `OLLAMA_HOST`, `OLLAMA_MODEL`, `OLLAMA_EMBED_MODEL`, optional `MUPDF_NET_INDEX` for `LocalIndexPath` (`PDF4LLM_INDEX` is a deprecated alias).
 
 Standard unit tests do not start Ollama.

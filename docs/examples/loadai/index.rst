@@ -8,19 +8,19 @@ Index PDFs with :meth:`Utils.LoadAiAsync`, then Ask, Summarize, Search, Add, and
 
 GitHub: `41-LoadAi <https://github.com/ArtifexSoftware/MuPDF.NET.Examples/tree/main/MuPDF.NET/41-LoadAi>`_ in `MuPDF.NET.Examples <https://github.com/ArtifexSoftware/MuPDF.NET.Examples>`_.
 
-``pier-orders.pdf`` (500×280 standing orders) and ``pier-schedule.pdf`` (500×260 berth table) are two North Pier notices. ``Utils.UseLayout(false)`` selects the classic extract path (no layout worker). ``CreateDevelopmentAiOptions`` uses hash embeddings and an in-memory index. ``ExampleRagChatClient`` is a local ``IChatClient`` so this sample needs no API keys. Swap that client for OpenAI, Azure, or Ollama — the MuPDF.NET extract/RAG API stays the same. ``LoadAiAsync`` returns an ``AiDocumentCollection``. The listing is UTF-8 without a BOM.
+``pier-orders.pdf`` (500×280 standing orders) and ``pier-schedule.pdf`` (500×260 berth table) are two North Pier notices. ``MuPDF4LLM.SetLayout(false)`` selects the classic extract path (no layout worker). ``CreateDevelopmentAiOptions`` uses hash embeddings and an in-memory index. ``ExampleRagChatClient`` is a local ``IChatClient`` so this sample needs no API keys. Swap that client for OpenAI, Azure, or Ollama — the MuPDF.NET extract/RAG API stays the same. ``LoadAiAsync`` returns an ``AiDocumentCollection``. The listing is UTF-8 without a BOM.
 
 To **split a PDF into layout chunks** without embed/ask, see :doc:`35-ToChunks </examples/chunks/index>`. For **one LlamaIndex document per page**, see :doc:`38-LlamaMarkdownReader </examples/llamareader/index>`. To **convert a PDF to Markdown**, see :doc:`32-ToMarkdown </examples/markdown/index>`.
 
 .. code-block:: cs
 
-    Utils.UseLayout(false);
+    MuPDF4LLM.SetLayout(false);
     await LoadAiAskSearch(new[] { ordersPath, schedulePath }, outputPath);
     await LoadAiAddDocuments(ordersPath, schedulePath);
     await LoadAiRemoveDocument(ordersPath, schedulePath);
     await LoadAiFilterSource(ordersPath, schedulePath);
 
-API: :meth:`Utils.UseLayout`, :meth:`Utils.CreateDevelopmentAiOptions`, :meth:`Utils.LoadAiAsync`, :class:`AiDocumentCollection`.
+API: :meth:`MuPDF4LLM.SetLayout` (also :meth:`Utils.SetLayout`), :meth:`Utils.CreateDevelopmentAiOptions`, :meth:`Utils.LoadAiAsync`, :class:`AiDocumentCollection`.
 
 
 Ask, Summarize, and Search
@@ -48,7 +48,7 @@ Ask, Summarize, and Search
 
         var listing = new StringBuilder();
         listing.AppendLine($"chunkCount={aiDocs.ChunkCount}");
-        listing.AppendLine($"layoutEnabled={Utils.LayoutEnabled}");
+        listing.AppendLine($"layoutEnabled={MuPDF4LLM.LayoutEnabled}");
         foreach (string source in aiDocs.SourceFiles.OrderBy(s => s, StringComparer.Ordinal))
             listing.AppendLine($"source={source}");
 

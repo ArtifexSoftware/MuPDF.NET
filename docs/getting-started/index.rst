@@ -109,7 +109,7 @@ You should now have a PDF file in the project folder ready to view - all created
 Try more
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-See further examples in :doc:`../the-basics/index` for the typical kind of things you may want to do. If you get stuck, have new ideas, find something that you can't do or have a feature request please visit the `MuPDF Blog`_ and let us know.
+See further examples in :doc:`../the-basics/index` and :doc:`../examples/index` (`MuPDF.NET.Examples <https://github.com/ArtifexSoftware/MuPDF.NET.Examples>`_). If you get stuck, have new ideas, find something that you can't do or have a feature request please visit the `MuPDF Blog`_ and let us know.
 
 
 
@@ -119,7 +119,7 @@ How to build
 - Clone `the GitHub project`_.
 - Open the `MuPDF.NET` solution (`MuPDF.NET.sln`).
 - Set the following in **Visual Studio**: `Release`, `x64` and `Build`
-- The result is `MuPDF.NET.dll` and `Demo.exe`. Users can use `MuPDF.NET.dll` as a reference in `C#` project and use defined classes and functions. `Demo.exe` is one of examples.
+- The result is `MuPDF.NET.dll` and `Demo.exe`. `Demo.exe` writes `Demo/Output/hello.pdf`. It does not need an Office key or extra input files. Users can reference `MuPDF.NET.dll` from a C# project. More samples are in :doc:`../examples/index`.
 
 
 

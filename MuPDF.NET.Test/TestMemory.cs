@@ -103,16 +103,13 @@ namespace MuPDF.NET.Test
 
         private static long GetPrivateMemoryMB() => GetPrivateMemoryBytes() / 1024 / 1024;
 
-        private static string DemoDoc(string fileName) =>
-            Path.Combine(_Path.ResolveSolutionRoot(), "TestDocuments", "Demo", fileName);
-
         /// <summary>
         /// Issue #213 repro: pixmap scale, JPEG encode, <c>InsertImage</c> on a new page.
         /// Returns private-memory growth ratio (last sample / baseline).
         /// </summary>
         private static float Issue213InsertImageMemoryLoop(bool useStream, int iterations = 100)
         {
-            string pdfPath = DemoDoc("issue_213.pdf");
+            string pdfPath = Doc("issue_213.pdf");
             string imgPath = Doc("boxedpage.jpg");
             if (!File.Exists(pdfPath))
                 throw new FileNotFoundException($"Required test document not found: {pdfPath}");
@@ -167,7 +164,7 @@ namespace MuPDF.NET.Test
         {
             if (SkipSlowTests(nameof(test_issue_213_insert_image_memory_filename)))
                 return;
-            if (!File.Exists(DemoDoc("issue_213.pdf")) || !File.Exists(Doc("boxedpage.jpg")))
+            if (!File.Exists(Doc("issue_213.pdf")) || !File.Exists(Doc("boxedpage.jpg")))
             {
                 Console.WriteLine($"{nameof(test_issue_213_insert_image_memory_filename)}(): skip, missing test documents");
                 return;
@@ -186,7 +183,7 @@ namespace MuPDF.NET.Test
         {
             if (SkipSlowTests(nameof(test_issue_213_insert_image_memory_stream)))
                 return;
-            if (!File.Exists(DemoDoc("issue_213.pdf")) || !File.Exists(Doc("boxedpage.jpg")))
+            if (!File.Exists(Doc("issue_213.pdf")) || !File.Exists(Doc("boxedpage.jpg")))
             {
                 Console.WriteLine($"{nameof(test_issue_213_insert_image_memory_stream)}(): skip, missing test documents");
                 return;

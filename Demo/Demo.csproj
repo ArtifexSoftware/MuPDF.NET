@@ -1,23 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Demo: MuPDF.NET and MuPDF.NET.Office samples under Samples/. -->
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Platforms>AnyCPU;x64;x86</Platforms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>annotations</Nullable>
-    <NoWarn>$(NoWarn);0618;CA1416;NU1603</NoWarn>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
-    <PackageReference Include="MuPDF.NET.Office" Version="$(ArtifexMuPDFNetOfficeVersion)" />
-    <PackageReference Include="MuPDF.NET.Office.NativeAssets" Version="$(ArtifexMuPDFNetOfficeVersion)" />
-    <PackageReference Include="Microsoft.Extensions.AI" Version="10.10.0" />
-    <PackageReference Include="OllamaSharp" Version="5.4.30" />
   </ItemGroup>
-
-  <Import Project="..\MuPDF.NET\build\MuPDF.NET.Layout.targets" Condition="Exists('..\MuPDF.NET\build\MuPDF.NET.Layout.targets')" />
-
 </Project>

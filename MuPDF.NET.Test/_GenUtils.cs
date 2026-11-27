@@ -56,17 +56,8 @@ namespace MuPDF.NET.Test
                 : Path.Combine(root, "TestDocuments", product, subFolder, fileName);
         }
 
-        public static string ResolveTestDocument(string fileName, string? subFolder = null)
-        {
-            string primary = CombineTestDocument("MuPDF.NET.Test", fileName, subFolder);
-            if (File.Exists(primary) || string.IsNullOrWhiteSpace(fileName))
-                return primary;
-            // Historical fixture folder from before LLM tests lived in MuPDF.NET.Test.
-            string layout = CombineTestDocument("MuPDF.NET.PDF4LLM.Test", fileName, subFolder);
-            if (File.Exists(layout))
-                return layout;
-            return primary;
-        }
+        public static string ResolveTestDocument(string fileName, string? subFolder = null) =>
+            CombineTestDocument("MuPDF.NET.Test", fileName, subFolder);
 
         public static string RequireTestDocument(string fileName, string? subFolder = null)
         {
