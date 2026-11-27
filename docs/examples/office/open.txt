@@ -1,0 +1,4 @@
+docxPages=3
+docxPage0=North Pier standing orders Tide 07:40. Berth 4 is open. Unload timber before noon.
+hwpxPages=1
+hwpxPage0=North Pier berth notice. Berth 4 is open.

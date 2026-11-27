@@ -45,8 +45,8 @@ doc.Metadata["title"] = MuPDF.NET 01-Basic fixture
 doc.Metadata["author"] = Artifex Software
 doc.Metadata["subject"] = 10-page sample covering Document and Page reads
 doc.Metadata["keywords"] = MuPDF.NET, 01-Basic, examples
-doc.Metadata["creator"] = Test/create_basic_pdf.py
-doc.Metadata["producer"] = PyMuPDF
+doc.Metadata["creator"] = MuPDF.NET
+doc.Metadata["producer"] = MuPDF.NET.Examples
 doc.Metadata["creationDate"] = 
 doc.Metadata["modDate"] = 
 doc.Metadata["trapped"] = 
@@ -61,8 +61,8 @@ doc.GetXmlMetadata() = <?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
         xmlns:xmp="http://ns.adobe.com/xap/1.0/">
       <dc:title><rdf:Alt><rdf:li xml:lang="x-default">MuPDF.NET 01-Basic fixture</rdf:li></rdf:Alt></dc:title>
       <dc:creator><rdf:Seq><rdf:li>Artifex Software</rdf:li></rdf:Seq></dc:creator>
-      <pdf:Producer>PyMuPDF</pdf:Producer>
-      <xmp:CreatorTool>Test/create_basic_pdf.py</xmp:CreatorTool>
+      <pdf:Producer>MuPDF.NET.Examples</pdf:Producer>
+      <xmp:CreatorTool>MuPDF.NET</xmp:CreatorTool>
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
@@ -142,7 +142,7 @@ doc.PdfTrailer() = <<
   /Size 71
   /Info 53 0 R
   /Root 1 0 R
-  /ID [ <C2A2C283C3846973C29126C3804EC380> <B71696BCED205A4F8DB40CC87D45F597> ]
+  /ID [ <C39515C29F4F4BC393C28762C3B2605A> <D4486B8CCCEA7393000CAA0747E34901> ]
   /Encrypt <<
     /Filter /Standard
     /R 6
@@ -159,11 +159,11 @@ doc.PdfTrailer() = <<
         /Length 32
       >>
     >>
-    /O <4979B138F96B690FE0994924B5406D441848E6810FF92ABC80060614EC770A1F957759E67C19A5B297DDA8F66A653266>
-    /U <CBC111ECC360D2386CAC0D448D81C06E51C4D574BF36CFC75B6E09E4C9CC5FEDF314E98EA58D0B8FB7FDAA8062C327D7>
-    /OE <3539688776EF6E2CC46E8663C754635ED02C25520B589CF293EEE19FC763E1AA>
-    /UE <C42C02188D32E5F68F1E2DDBEC83D0B7695D23A66E0A8FF0A76AEBAFE2DE0F09>
-    /Perms <88BC1E691B1944A2D7BB948E18DFC0ED>
+    /O <BFE752C94A6D1D472C34E4DDF72BE160B242D20E290101F4C5C4F08C76650A3A243C3D7A8CD3BC3E14E6D3B741F15E3C>
+    /U <564EC99246112A7ED018458A7F573C3FB8625ADF725914B742A3B23B5B529FA003AFDDD23D91A172F2D963CF8D450F9D>
+    /OE <0B117049104436C9A212FD4FEE86C4B2FD614A053DCA9654C3BB2DF70E4B1C6C>
+    /UE <6DDA8EF0986825AC71A1B6306071EC0620962817B60996F793974CAD2745D09D>
+    /Perms <7B134FFB9D42EED79FF641A34B173800>
   >>
 >>
 doc[0].GetLabel() = Cover-1

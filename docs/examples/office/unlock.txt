@@ -1,0 +1,3 @@
+unlocked=True
+fontPath=C:\Windows\Fonts
+fontPath=C:\Users\Administrator\AppData\Local\Microsoft\Windows\Fonts

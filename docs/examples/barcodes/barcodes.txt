@@ -1,0 +1,7 @@
+barcodeCount=6
+QR	https://mupdf.com
+AZTEC	MuPDF.NET
+CODE128	Hello World!
+CODE39	CODE39
+EAN8	12345670
+PDF417	Hello World!

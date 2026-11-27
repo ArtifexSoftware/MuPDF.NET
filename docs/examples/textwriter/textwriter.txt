@@ -1,0 +1,8 @@
+lastPoint=167.41,240
+textRect=25.2,31.14,360.96,253.62
+---text---
+MuPDF.NET TextWriter
+FillTextbox wraps a paragraph inside a rectangle.
+Append writes a span from a Point.
+Append starts at a Point.
+

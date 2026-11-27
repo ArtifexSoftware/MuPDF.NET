@@ -1,0 +1,7 @@
+---before---
+embeddedCount=0
+---after---
+xref=19
+embeddedCount=1
+factur-x.xml	3929	1dec3281588dae85c831b12bb361bc1250c90c9cef37b6db031a98ab6fa0128f
+roundTripMatch=true

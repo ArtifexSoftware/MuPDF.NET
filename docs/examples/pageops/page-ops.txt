@@ -1,0 +1,9 @@
+before=A,B,C
+afterInsert=A,X,A,B,C
+afterInsert.pageCount=5
+afterMove=C,A,X,A,B
+afterMove.pageCount=5
+afterDelete=C,X,A,B
+afterDelete.pageCount=4
+afterSelect=C
+afterSelect.pageCount=1

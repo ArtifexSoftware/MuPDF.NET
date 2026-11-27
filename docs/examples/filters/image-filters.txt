@@ -1,0 +1,5 @@
+width=480
+height=320
+n=3
+filterCount=1
+filter=Median

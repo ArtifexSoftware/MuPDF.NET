@@ -10,30 +10,32 @@ GitHub: `02-PagesMergeSplit <https://github.com/ArtifexSoftware/MuPDF.NET.Exampl
 
 ``pages-a.pdf`` is the destination (3 pages). ``pages-b.pdf`` is the source; only page 0 is inserted at position 1.
 
+To **move, delete, or select pages**, see :doc:`29-PageOps </examples/pageops/index>`.
+
 .. code-block:: cs
 
     /// <summary>Merge pages from two PDFs, then extract the first page</summary>
-    static void PagesMergeSplit(string a, string b, string merged, string firstPage)
+    static void PagesMergeSplit(string inputPathA, string inputPathB, string mergedPath, string firstPagePath)
     {
         // Open both source PDFs.
-        using (var docA = Document.Open(a))
-        using (var docB = Document.Open(b))
+        using (var docA = Document.Open(inputPathA))
+        using (var docB = Document.Open(inputPathB))
         {
             // Insert page 0 of B into A at position 1 (0-based startAt).
             docA.InsertPdf(docB, fromPage: 0, toPage: 0, startAt: 1);
-            docA.Save(merged);
+            docA.Save(mergedPath);
         }
 
         // Split: copy only the first page of the merged file into a new document.
-        using (var src = Document.Open(merged))
+        using (var src = Document.Open(mergedPath))
         using (var one = new Document())
         {
             one.InsertPdf(src, fromPage: 0, toPage: 0);
-            one.Save(firstPage);
+            one.Save(firstPagePath);
         }
     }
 
-API: :meth:`Document.Document`, :meth:`Document.InsertPdf`, :meth:`Document.Save`.
+API: :meth:`Document.Open`, :meth:`Document.InsertPdf`, :meth:`Document.Save`.
 
 Result of ``merged.pdf``:
 

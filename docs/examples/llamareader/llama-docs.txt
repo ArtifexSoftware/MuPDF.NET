@@ -1,0 +1,35 @@
+docCount=2
+layoutEnabled=False
+
+--- page 1 / 2 ---
+# **North Pier**
+
+24 Nov 2026  Issue 12
+
+## **Standing orders**
+
+Tide 07:40. Wind SW 12 kn. Berth 4 is open.
+
+Unload timber before noon. Next shift starts at 13:00.
+
+Keep this copy with the noon report.
+
+
+
+--- page 2 / 2 ---
+# **Berth schedule**
+
+North Pier  Issue 12
+
+|Berth|Vessel|ETA|Status|
+|---|---|---|---|
+|2|standby|-|hold|
+|4|timber barge|07:40|open|
+|5|Pilot 2|12:10|due|
+
+
+File this page with the noon minutes. Berth 4 stays open for timber.
+
+North Pier - Berth 4 - standing orders
+
+

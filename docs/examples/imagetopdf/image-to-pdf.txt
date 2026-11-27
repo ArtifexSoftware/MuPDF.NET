@@ -1,0 +1,6 @@
+width=480
+height=320
+n=3
+pageCount=1
+xref=5
+sizedToImage=True

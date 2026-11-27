@@ -1,0 +1,20 @@
+---before---
+author=Artifex Software
+creator=MuPDF.NET
+encryption=Standard V5 R6 256-bit AES
+format=PDF 1.7
+keywords=MuPDF.NET, 01-Basic, examples
+producer=MuPDF.NET.Examples
+subject=10-page sample covering Document and Page reads
+title=MuPDF.NET 01-Basic fixture
+trapped=
+---after---
+author=Artifex
+creator=MuPDF.NET.Examples
+encryption=Standard V5 R6 256-bit AES
+format=PDF 1.7
+keywords=MuPDF.NET, 01-Basic, examples
+producer=MuPDF.NET.Examples
+subject=14-Metadata sample
+title=MuPDF.NET.Examples — Metadata
+trapped=

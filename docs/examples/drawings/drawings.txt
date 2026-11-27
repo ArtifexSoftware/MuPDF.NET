@@ -1,0 +1,5 @@
+pathCount=3
+seq=0 type=s items=l rect=72,100,468,100
+seq=1 type=s items=re rect=72,180,220,280
+seq=2 type=fs items=c,c,c,c rect=310,190,390,270
+redrawnRects=3

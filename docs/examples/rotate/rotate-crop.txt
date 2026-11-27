@@ -1,0 +1,7 @@
+before.rotation=0
+before.rect=0,0,360,480
+before.cropbox=0,0,360,480
+after.rotation=90
+after.rect=0,0,480,360
+crop.rect=0,0,180,240
+after.cropbox=0,0,180,240

@@ -10,6 +10,10 @@ Examples for `MuPDF.NET.Examples <https://github.com/ArtifexSoftware/MuPDF.NET.E
    :maxdepth: 1
 
    unlock
+   openhwpx
+   exportpdf
+   exportmdjson
+   tomarkdown
 
 
 .. include:: ../../footer.rst

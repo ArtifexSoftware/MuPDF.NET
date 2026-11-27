@@ -1,0 +1,13 @@
+before.needsPass=False
+before.isEncrypted=False
+encrypted=ok
+needsPass=True
+isEncrypted=True
+authenticate=2
+pages=1
+encryption=Standard V5 R6 256-bit AES
+decrypted=ok
+after.needsPass=False
+after.isEncrypted=False
+after.pages=1
+after.encryption=none

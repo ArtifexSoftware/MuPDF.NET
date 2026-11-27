@@ -13,9 +13,9 @@ GitHub: `07-AnnotationsRedact <https://github.com/ArtifexSoftware/MuPDF.NET.Exam
 .. code-block:: cs
 
     /// <summary>Add text/rect annotations and apply a redaction</summary>
-    static void AnnotationsRedact(string input, string output)
+    static void AnnotationsRedact(string inputPath, string outputPath)
     {
-        using (var doc = Document.Open(input))
+        using (var doc = Document.Open(inputPath))
         using (Page page = doc[0])
         {
             var rect = new Rect(72, 72, 300, 120);
@@ -39,11 +39,11 @@ GitHub: `07-AnnotationsRedact <https://github.com/ArtifexSoftware/MuPDF.NET.Exam
 
             int annotCount = page.Annots().Count();
             Console.WriteLine($"annotCount={annotCount}");
-            doc.Save(output);
+            doc.Save(outputPath);
         }
     }
 
-API: :meth:`Document.Document`, :meth:`Page.AddTextAnnot`, :meth:`Annot.SetInfo`, :meth:`Page.AddRectAnnot`, :meth:`Annot.SetColors`, :meth:`Annot.Update`, :meth:`Page.AddRedactAnnot`, :meth:`Page.ApplyRedactions`, :meth:`Document.Save`.
+API: :meth:`Document.Open`, :meth:`Page.AddTextAnnot`, :meth:`Annot.SetInfo`, :meth:`Page.AddRectAnnot`, :meth:`Annot.SetColors`, :meth:`Annot.Update`, :meth:`Page.AddRedactAnnot`, :meth:`Page.ApplyRedactions`, :meth:`Document.Save`.
 
 Result of ``page.Annots()`` after ``ApplyRedactions`` (the redaction is gone; the note and rectangle remain):
 

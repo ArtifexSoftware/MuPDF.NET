@@ -1,0 +1,10 @@
+fieldCount=7
+name       field_value      pages  terminal
+---------  ---------------  -----  --------
+country    France           [0]    True    
+email      ada@example.com  [0]    True    
+fullName   Ada Lovelace     [0]    True    
+language   C#               [0]    True    
+plan       Pro              [0]    True    
+subscribe  Yes              [0]    True    
+terms      Off              [0]    True    

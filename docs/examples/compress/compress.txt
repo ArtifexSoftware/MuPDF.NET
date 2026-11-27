@@ -1,0 +1,5 @@
+inputBytes=216067
+plainBytes=216067
+compressedBytes=10910
+fileSizePct=5.0
+smallerOrEqual=True

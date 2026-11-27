@@ -1,0 +1,17 @@
+---before---
+page=420x456
+inputBytes=2890314
+imageCount=4
+xref=5 name=fzImg0 pixels=800x800 draw=160x160 bpc=8 cs=ICCBased
+xref=11 name=fzImg1 pixels=800x800 draw=160x160 bpc=8 cs=ICCBased
+xref=14 name=fzImg2 pixels=800x800 draw=160x160 bpc=8 cs=ICCBased
+xref=19 name=fzImg3 pixels=800x800 draw=160x160 bpc=1 cs=ICCBased
+---after---
+page=420x456
+pixelPct=25
+fileSizePct=0.5
+imageCount=4
+xref=9 name=Im1 pixels=200x200 draw=160x160 bpc=8 cs=ICCBased
+xref=12 name=Im2 pixels=200x200 draw=160x160 bpc=8 cs=ICCBased
+xref=13 name=Im3 pixels=200x200 draw=160x160 bpc=8 cs=ICCBased
+xref=7 name=Im4 pixels=800x800 draw=160x160 bpc=1 cs=ICCBased

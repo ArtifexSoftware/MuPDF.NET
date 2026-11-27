@@ -136,7 +136,7 @@ For a description of what this class is all about, see Appendix 2.
         3. **Hyphenated words** are now found.
         4. **Overlapping rectangles** in the same line are now automatically joined. We assume that such separations are an artifact created by multiple marked content groups, containing parts of the same search needle.
 
-      Example Quad versus Rect: when searching for needle "pymupdf", then the corresponding entry will either be the blue rectangle, or, if *quads* was specified, the quad *Quad(ul, ur, ll, lr)*.
+      Example Quad versus Rect: when searching for needle "MuPDF.NET", then the corresponding entry will either be the blue rectangle, or, if *quads* was specified, the quad *Quad(ul, ur, ll, lr)*.
 
       .. image:: ../images/img-quads.*
 
